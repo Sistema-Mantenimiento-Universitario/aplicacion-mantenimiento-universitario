@@ -1,36 +1,43 @@
 import 'package:flutter/material.dart';
+import 'data/incidencias_repository.dart';
+import 'models/usuario.dart';
+import 'pages/home_page.dart';
+import 'pages/pendiente_page.dart';
+import 'pages/rutas.dart';
+import 'theme/app_theme.dart';
 
+/// localhost para pruebas
+const String kApiBaseUrl = 'http://localhost:3000';
 void main() {
   runApp(const MyApp());
 }
 
 class MyApp extends StatelessWidget {
   const MyApp({super.key});
-
-  // This widget is the root of your application.
+ 
+  // TODO: reemplazar por el usuario que devuelve el login.
+  // Cambia el rol a Rol.operador para probar la vista del operador.
+  static const Usuario _usuarioDemo =
+      Usuario(id: 1, nombre: 'Jane', rol: Rol.operador);
+ 
   @override
   Widget build(BuildContext context) {
+    final repositorio = IncidenciasRepository(baseUrl: kApiBaseUrl, token: _usuarioDemo.token);
+ 
     return MaterialApp(
-      title: 'Flutter Demo',
-      theme: ThemeData(
-        // This is the theme of your application.
-        //
-        // TRY THIS: Try running your application with "flutter run". You'll see
-        // the application has a purple toolbar. Then, without quitting the app,
-        // try changing the seedColor in the colorScheme below to Colors.green
-        // and then invoke "hot reload" (save your changes or press the "hot
-        // reload" button in a Flutter-supported IDE, or press "r" if you used
-        // the command line to start the app).
-        //
-        // Notice that the counter didn't reset back to zero; the application
-        // state is not lost during the reload. To reset the state, use hot
-        // restart instead.
-        //
-        // This works for code too, not just values: Most code changes can be
-        // tested with just a hot reload.
-        colorScheme: .fromSeed(seedColor: Colors.deepPurple),
-      ),
-      home: const MyHomePage(title: 'Flutter Demo Home Page'),
+      title: 'Incidencias',
+      theme: AppTheme.claro,
+      initialRoute: Rutas.inicio,
+      routes: {
+        Rutas.inicio: (_) => HomePage(usuario: _usuarioDemo, repositorio: repositorio),
+        // Sustituye estas pantallas provisionales por las reales:
+        Rutas.nuevaIncidencia: (_) =>
+            const PendientePage(titulo: 'Nueva incidencia'),
+        Rutas.misIncidencias: (_) =>
+            const PendientePage(titulo: 'Mis incidencias'),
+        Rutas.adminIncidencias: (_) =>
+            const PendientePage(titulo: 'Administración de incidencias'),
+      },
     );
   }
 }

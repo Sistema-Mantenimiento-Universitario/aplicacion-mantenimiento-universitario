@@ -13,6 +13,7 @@ Este documento define los endpoints de la API para que frontend y backend trabaj
 | Nombres de campos | `snake_case`, igual que la base de datos |
 | Roles | `usuario` y `operador` |
 | Estados | `pendiente`, `asignada`, `en_proceso`, `finalizada`, `cancelada` |
+| CORS | El backend habilita CORS (paquete `cors`) en las rutas `/api` y en `/uploads`, para que Flutter web pueda consumir la API y mostrar las imágenes |
 
 Los permisos se comprueban siempre en el backend. Ocultar botones en Flutter no es suficiente.
 
@@ -25,6 +26,7 @@ Las rutas de este documento incluyen el prefijo `/api`. En los Issues del proyec
 | GET | `/api/prueba` | Público | Prueba de que el servidor funciona (ya implementado) |
 | POST | `/api/auth/registro` | Público | Registra un usuario nuevo (opcional) |
 | POST | `/api/auth/login` | Público | Inicia sesión y devuelve el token |
+| GET | `/api/auth/perfil` | `usuario`, `operador` | Devuelve los datos del usuario del token |
 | POST | `/api/incidencias` | `usuario`, `operador` | Crea una incidencia |
 | GET | `/api/incidencias` | `usuario`, `operador` | Lista incidencias con búsqueda y filtros |
 | GET | `/api/incidencias/resumen` | `usuario`, `operador` | Conteo de incidencias por estado |
@@ -39,7 +41,33 @@ Las rutas de este documento incluyen el prefijo `/api`. En los Issues del proyec
 | POST | `/api/categorias` | `operador` | Crea una categoría |
 | PUT | `/api/categorias/:id` | `operador` | Edita una categoría |
 
-Únicamente las rutas públicas están disponibles sin autenticación; las demás requieren un token de acceso.
+Salvo los marcados como públicos, todos los endpoints requieren el token.
+
+## Límites y validaciones de campos
+
+Los máximos coinciden con `database/schema.sql`. Los mínimos los define el equipo para que el backend y Flutter validen igual. Un campo que no cumple devuelve 400 con el detalle en `errores`.
+
+| Campo | Mínimo | Máximo | Reglas |
+|---|---|---|---|
+| `nombre` (usuario) | 2 | 100 | Obligatorio |
+| `correo` | 5 | 150 | Obligatorio, formato de correo válido |
+| `password` | 8 | 72 | Obligatorio al registrar (72 es el límite de bcrypt). En el login solo se exige que no esté vacío |
+| `titulo` | 5 | 150 | Obligatorio |
+| `descripcion` | 10 | 2000 | Obligatorio |
+| `id_categoria` | | | Obligatorio, entero positivo de una categoría existente y activa |
+| `ubicacion_texto` | 3 | 200 | Opcional si se envían `latitud` y `longitud` |
+| `latitud` | -90 | 90 | Número con hasta 6 decimales; se envía junto con `longitud` |
+| `longitud` | -180 | 180 | Número con hasta 6 decimales; se envía junto con `latitud` |
+| `solucion_descripcion` | 10 | 2000 | Obligatoria al pasar a `finalizada` |
+| `comentario` (historial) | | 500 | Opcional |
+| `nombre` (categoría) | 3 | 80 | Obligatorio, único |
+| `descripcion` (categoría) | | 255 | Opcional |
+| `q` (búsqueda) | | 100 | Opcional |
+| `imagenes` | | 5 archivos, 5 MB cada uno | Solo `image/jpeg`, `image/png` y `image/webp` |
+
+Los campos `ruta_archivo` (255), `nombre_original` (255) y `mime_type` (100) los genera el servidor al guardar cada imagen.
+
+---
 
 ## Formato de errores
 
@@ -123,6 +151,23 @@ Todos los errores responden con el mismo formato JSON:
 
 **Errores:** 400 (faltan campos), 401 (credenciales incorrectas o usuario inactivo), 500.
 
+### GET `/api/auth/perfil`
+
+- **Rol:** `usuario` u `operador`.
+- **Descripción:** devuelve los datos del usuario a partir del token. La app lo usa al abrirse con una sesión guardada, para recuperar nombre, correo y rol, y para comprobar que el token sigue siendo válido.
+
+**Respuesta 200:**
+```json
+{
+  "id_usuario": 5,
+  "nombre": "Ana López",
+  "correo": "ana@correo.com",
+  "rol": "usuario"
+}
+```
+
+**Errores:** 401 (token inválido, expirado, o el usuario ya no existe o está inactivo), 500.
+
 ---
 
 ## Incidencias
@@ -167,11 +212,13 @@ Cuando una incidencia ya tiene operador, `operador` es `{ "id_usuario": 2, "nomb
 }
 ```
 
-`titulo`, `descripcion` e `id_categoria` son obligatorios. `ubicacion_texto`, `latitud` y `longitud` son opcionales.
+`titulo`, `descripcion` e `id_categoria` son obligatorios.
+
+**Ubicación:** se debe enviar al menos una forma de ubicación: `ubicacion_texto`, o el par `latitud` y `longitud` (siempre las dos juntas). Se pueden enviar ambas. Esta regla se valida en el backend; en la base de datos esos campos admiten `NULL`.
 
 **Respuesta 201:** el objeto incidencia.
 
-**Errores:** 400 (datos inválidos o categoría inexistente o inactiva), 401, 500.
+**Errores:** 400 (datos inválidos, falta la ubicación, o categoría inexistente o inactiva), 401, 500.
 
 ### GET `/api/incidencias`
 
@@ -197,11 +244,14 @@ Los parámetros se pueden combinar: `/api/incidencias?estado=pendiente&categoria
     "estado": "pendiente",
     "categoria": { "id_categoria": 2, "nombre": "Electricidad" },
     "reportado_por": { "id_usuario": 5, "nombre": "Ana López" },
+    "operador": null,
     "ubicacion_texto": "Edificio 3, planta baja",
     "fecha_creacion": "2026-11-11T15:30:00.000Z"
   }
 ]
 ```
+
+`operador` es `null` mientras la incidencia no se asigna; después es `{ "id_usuario": 2, "nombre": "Luis Pérez" }`. El panel del operador lo usa para mostrar quién atiende cada incidencia.
 
 Si no hay resultados, responde `200` con una lista vacía `[]`.
 
@@ -239,7 +289,7 @@ Si no hay resultados, responde `200` con una lista vacía `[]`.
 - **Rol:** `usuario`, solo el creador y solo mientras la incidencia está `pendiente`.
 - **Descripción:** edita los datos. Registra el cambio en el historial.
 
-**Cuerpo (mismos campos que al crear):**
+**Cuerpo (mismos campos y reglas que al crear, incluida la ubicación):**
 ```json
 {
   "titulo": "Lámpara fundida en el pasillo del edificio 3",
@@ -251,7 +301,7 @@ Si no hay resultados, responde `200` con una lista vacía `[]`.
 
 **Respuesta 200:** el objeto incidencia actualizado.
 
-**Errores:** 400 (datos inválidos o la incidencia ya no está pendiente), 401, 403 (no es el creador), 404, 500.
+**Errores:** 400 (datos inválidos, la incidencia se quedaría sin ubicación, o ya no está pendiente), 401, 403 (no es el creador), 404, 500.
 
 ### DELETE `/api/incidencias/:id`
 

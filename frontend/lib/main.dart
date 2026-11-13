@@ -18,7 +18,7 @@ class MyApp extends StatelessWidget {
   // TODO: reemplazar por el usuario que devuelve el login.
   // Cambia el rol a Rol.operador para probar la vista del operador.
   static const Usuario _usuarioDemo =
-      Usuario(id: 1, nombre: 'Jane', rol: Rol.usuario);
+      Usuario(id: 1, nombre: 'Jane', rol: Rol.operador);
  
   @override
   Widget build(BuildContext context) {

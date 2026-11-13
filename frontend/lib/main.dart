@@ -18,26 +18,31 @@ class MyApp extends StatelessWidget {
   // TODO: reemplazar por el usuario que devuelve el login.
   // Cambia el rol a Rol.operador para probar la vista del operador.
   static const Usuario _usuarioDemo =
-      Usuario(id: 1, nombre: 'Jane', rol: Rol.operador);
+      Usuario(id: 1, nombre: 'Jane', rol: Rol.usuario);
  
   @override
   Widget build(BuildContext context) {
     final repositorio = IncidenciasRepository(baseUrl: kApiBaseUrl, token: _usuarioDemo.token);
  
-    return MaterialApp(
-      title: 'Incidencias',
-      theme: AppTheme.claro,
-      initialRoute: Rutas.inicio,
-      routes: {
-        Rutas.inicio: (_) => HomePage(usuario: _usuarioDemo, repositorio: repositorio),
-        // Sustituye estas pantallas provisionales por las reales:
-        Rutas.nuevaIncidencia: (_) =>
-            const PendientePage(titulo: 'Nueva incidencia'),
-        Rutas.misIncidencias: (_) =>
-            const PendientePage(titulo: 'Mis incidencias'),
-        Rutas.adminIncidencias: (_) =>
-            const PendientePage(titulo: 'Administración de incidencias'),
-      },
+    return ValueListenableBuilder<ThemeMode>(
+      valueListenable: modoTema,
+      builder: (context, modo, _) => MaterialApp(
+        title: 'Incidencias',
+        theme: AppTheme.claro,
+        darkTheme: AppTheme.oscuro,
+        themeMode: modo,
+        initialRoute: Rutas.inicio,
+        routes: {
+          Rutas.inicio: (_) => HomePage(usuario: _usuarioDemo, repositorio: repositorio),
+          // Sustituye estas pantallas provisionales por las reales:
+          Rutas.nuevaIncidencia: (_) =>
+              const PendientePage(titulo: 'Nueva incidencia'),
+          Rutas.misIncidencias: (_) =>
+              const PendientePage(titulo: 'Mis incidencias'),
+          Rutas.adminIncidencias: (_) =>
+              const PendientePage(titulo: 'Administración de incidencias'),
+        },
+      ),
     );
   }
 }

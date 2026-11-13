@@ -87,6 +87,7 @@ class _HomePageState extends State<HomePage> {
       appBar: AppBar(
         title: const Text('Inicio'),
         actions: [
+          const BotonTema(),
           IconButton(
             tooltip: 'Actualizar',
             icon: const Icon(Icons.refresh),
@@ -256,8 +257,14 @@ class _TarjetaEstado extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final oscuro = theme.brightness == Brightness.dark;
+    // En modo oscuro se usa un tinte del color de acento sobre la superficie.
+    final fondo = oscuro
+        ? Color.alphaBlend(
+            info.acento.withValues(alpha: 0.18), AppColors.superficieOscura)
+        : info.fondo;
     return Card(
-      color: info.fondo,
+      color: fondo,
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(12),
         side: BorderSide(color: info.acento),

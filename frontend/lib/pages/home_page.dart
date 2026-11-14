@@ -349,47 +349,51 @@ class _InfoEstado {
   final int orden;
 
   static _InfoEstado de(String estado) {
-    switch (estado.toLowerCase().replaceAll(' ', '_')) {
-      case 'abierta':
-      case 'abierto':
-      case 'nueva':
+    switch (estado) {
       case 'pendiente':
         return const _InfoEstado(
-          etiqueta: 'Abiertas',
-          icono: Icons.error_outline,
+          etiqueta: 'Pendientes',
+          icono: Icons.schedule,
           fondo: AppColors.amarilloClaro,
           acento: AppColors.amarillo,
           sobreAcento: AppColors.texto,
           orden: 0,
         );
-      case 'en_proceso':
-      case 'en_progreso':
       case 'asignada':
         return const _InfoEstado(
-          etiqueta: 'En proceso',
-          icono: Icons.autorenew,
+          etiqueta: 'Asignadas',
+          icono: Icons.assignment_ind_outlined,
           fondo: AppColors.lilaClaro,
           acento: AppColors.morado,
           sobreAcento: AppColors.blanco,
           orden: 1,
         );
-      case 'resuelta':
+      case 'en_proceso':
         return const _InfoEstado(
-          etiqueta: 'Resueltas',
+          etiqueta: 'En proceso',
+          icono: Icons.build_outlined,
+          fondo: AppColors.blanco,
+          acento: AppColors.amarillo,
+          sobreAcento: AppColors.texto,
+          orden: 2,
+        );
+      case 'finalizada':
+        return const _InfoEstado(
+          etiqueta: 'Finalizadas',
           icono: Icons.check,
           fondo: AppColors.blanco,
           acento: AppColors.morado,
           sobreAcento: AppColors.blanco,
-          orden: 2,
-        );
-      case 'cerrada':
-        return const _InfoEstado(
-          etiqueta: 'Cerradas',
-          icono: Icons.lock_outline,
-          fondo: AppColors.blanco,
-          acento: AppColors.amarillo,
-          sobreAcento: AppColors.texto,
           orden: 3,
+        );
+      case 'cancelada':
+        return const _InfoEstado(
+          etiqueta: 'Canceladas',
+          icono: Icons.block,
+          fondo: AppColors.blanco,
+          acento: AppColors.lilaClaro,
+          sobreAcento: AppColors.texto,
+          orden: 4,
         );
       default:
         final texto = estado.replaceAll('_', ' ');

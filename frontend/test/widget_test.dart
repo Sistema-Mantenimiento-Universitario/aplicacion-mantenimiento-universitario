@@ -1,30 +1,86 @@
-// This is a basic Flutter widget test.
-//
-// To perform an interaction with a widget in your test, use the WidgetTester
-// utility in the flutter_test package. For example, you can send tap and scroll
-// gestures. You can also use WidgetTester to find child widgets in the widget
-// tree, read text, and verify that the values of widget properties are correct.
-
+// Pruebas de la F5 · Pantalla principal según el rol.
+// Usan el repositorio simulado, así que no necesitan el backend.
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
-import 'package:mantenimiento_universitario/main.dart';
+import 'package:mantenimiento_universitario/data/incidencias_fake_repository.dart';
+import 'package:mantenimiento_universitario/data/incidencias_repository.dart';
+import 'package:mantenimiento_universitario/models/usuario.dart';
+import 'package:mantenimiento_universitario/pages/home_page.dart';
+import 'package:mantenimiento_universitario/theme/app_theme.dart';
+
+const _ana = Usuario(
+  id: 1,
+  nombre: 'Ana López',
+  correo: 'ana@correo.com',
+  rol: Rol.usuario,
+);
+
+const _luis = Usuario(
+  id: 2,
+  nombre: 'Luis Pérez',
+  correo: 'luis@correo.com',
+  rol: Rol.operador,
+);
+
+/// Repositorio que siempre falla, para probar el estado de error.
+class _RepositorioConError implements IncidenciasRepository {
+  @override
+  Future<Map<String, int>> obtenerResumenPorEstado() async =>
+      throw ApiException('No se pudo conectar con el servidor');
+}
+
+Future<void> _abrirHome(
+  WidgetTester tester,
+  Usuario usuario,
+  IncidenciasRepository repositorio,
+) async {
+  // Pantalla alta para que toda la lista quede visible.
+  tester.view.physicalSize = const Size(1080, 2400);
+  tester.view.devicePixelRatio = 1.0;
+  addTearDown(tester.view.reset);
+
+  await tester.pumpWidget(MaterialApp(
+    theme: AppTheme.claro,
+    home: HomePage(usuario: usuario, repositorio: repositorio),
+  ));
+  await tester.pumpAndSettle();
+}
+
+FakeIncidenciasRepository _fake(Usuario u) => FakeIncidenciasRepository(
+      idUsuario: u.id,
+      esOperador: u.esOperador,
+      demora: Duration.zero,
+    );
 
 void main() {
-  testWidgets('Counter increments smoke test', (WidgetTester tester) async {
-    // Build our app and trigger a frame.
-    await tester.pumpWidget(const MyApp());
+  testWidgets('Usuario: ve su resumen y sus accesos', (tester) async {
+    await _abrirHome(tester, _ana, _fake(_ana));
 
-    // Verify that our counter starts at 0.
-    expect(find.text('0'), findsOneWidget);
-    expect(find.text('1'), findsNothing);
+    expect(find.text('Hola, Ana López'), findsOneWidget);
+    expect(find.text('Total: 5'), findsOneWidget);
+    expect(find.text('Pendientes'), findsOneWidget);
+    expect(find.text('Canceladas'), findsOneWidget);
 
-    // Tap the '+' icon and trigger a frame.
-    await tester.tap(find.byIcon(Icons.add));
-    await tester.pump();
+    expect(find.text('Nueva incidencia'), findsOneWidget);
+    expect(find.text('Mis incidencias'), findsOneWidget);
+    expect(find.text('Administración de incidencias'), findsNothing);
+  });
 
-    // Verify that our counter has incremented.
-    expect(find.text('0'), findsNothing);
-    expect(find.text('1'), findsOneWidget);
+  testWidgets('Operador: ve todas las incidencias y la administración',
+      (tester) async {
+    await _abrirHome(tester, _luis, _fake(_luis));
+
+    expect(find.text('Total: 7'), findsOneWidget);
+    expect(find.text('Administración de incidencias'), findsOneWidget);
+    expect(find.text('Nueva incidencia'), findsNothing);
+    expect(find.text('Mis incidencias'), findsNothing);
+  });
+
+  testWidgets('Muestra el error y permite reintentar', (tester) async {
+    await _abrirHome(tester, _ana, _RepositorioConError());
+
+    expect(find.text('No se pudo conectar con el servidor'), findsOneWidget);
+    expect(find.text('Reintentar'), findsOneWidget);
   });
 }

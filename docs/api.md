@@ -9,11 +9,13 @@ Este documento define los endpoints de la API para que frontend y backend trabaj
 | URL base (desarrollo) | `http://localhost:3000/api` |
 | Formato | JSON (`Content-Type: application/json`), salvo la subida de evidencias (`multipart/form-data`) |
 | Autenticación | JWT en el encabezado `Authorization: Bearer <token>` |
+| Duración de la sesión | El token expira a las 24 horas (valor configurable con `JWT_EXPIRES_IN` en `.env`). Al expirar, la API responde 401 y la app debe cerrar la sesión local y regresar al login |
 | Fechas | ISO 8601 en UTC, por ejemplo `2026-11-11T15:30:00.000Z` |
 | Nombres de campos | `snake_case`, igual que la base de datos |
 | Roles | `usuario` y `operador` |
 | Estados | `pendiente`, `asignada`, `en_proceso`, `finalizada`, `cancelada` |
 | CORS | El backend habilita CORS (paquete `cors`) en las rutas `/api` y en `/uploads`, para que Flutter web pueda consumir la API y mostrar las imágenes |
+| Acceso a imágenes | Los archivos de `/uploads` se sirven **sin token**, para que la app los muestre con `Image.network`. Los nombres de archivo son aleatorios (UUID), y la lista de URLs solo se obtiene con `GET /api/incidencias/:id/evidencias`, que sí exige token y permisos |
 
 Los permisos se comprueban siempre en el backend. Ocultar botones en Flutter no es suficiente.
 
@@ -41,7 +43,24 @@ Las rutas de este documento incluyen el prefijo `/api`. En los Issues del proyec
 | POST | `/api/categorias` | `operador` | Crea una categoría |
 | PUT | `/api/categorias/:id` | `operador` | Edita una categoría |
 
-Salvo los marcados como públicos, todos los endpoints requieren el token.
+Salvo los marcados como públicos, todos los endpoints de `/api` requieren el token. Los archivos de `/uploads` son la excepción (ver «Acceso a imágenes» en las convenciones).
+
+## Equivalencia de nombres con la base de datos
+
+Los campos de la API usan los mismos nombres que las columnas de `database/schema.sql`. Donde la respuesta agrupa datos relacionados en un objeto, los nombres de dentro también son los de la base de datos. Las únicas diferencias son estas:
+
+| En la API | En la base de datos | Explicación |
+|---|---|---|
+| `reportado_por: { id_usuario, nombre }` | `incidencias.id_usuario` + `usuarios.nombre` | Objeto con quien reporta la incidencia |
+| `operador: { id_usuario, nombre }` | `incidencias.id_operador` + `usuarios.nombre` | Objeto con quien atiende; `null` si no hay |
+| `categoria: { id_categoria, nombre }` | `incidencias.id_categoria` + `categorias.nombre` | Objeto con la categoría de la incidencia |
+| `responsable: { id_usuario, nombre }` | `historial.id_usuario` + `usuarios.nombre` | Quien hizo el cambio en el historial |
+| `url` | `evidencias.ruta_archivo` | El servidor construye la URL a partir de la ruta guardada |
+| `password` (en las peticiones) | `usuarios.password_hash` | La API recibe la contraseña y el backend guarda solo su hash bcrypt; nunca se devuelve |
+| `?categoria=` (filtro del listado) | `incidencias.id_categoria` | Nombre fijado por el Issue B3; recibe un `id_categoria` |
+| `imagenes` (campo del formulario) | | Nombre del campo multipart; no es una columna |
+
+---
 
 ## Límites y validaciones de campos
 
@@ -150,6 +169,8 @@ Todos los errores responden con el mismo formato JSON:
 ```
 
 **Errores:** 400 (faltan campos), 401 (credenciales incorrectas o usuario inactivo), 500.
+
+**Sesión:** el token dura 24 horas. Cuando expira, cualquier endpoint protegido responde 401 con el mensaje `Sesión expirada. Inicia sesión de nuevo`.
 
 ### GET `/api/auth/perfil`
 
@@ -275,6 +296,8 @@ Si no hay resultados, responde `200` con una lista vacía `[]`.
 ```
 
 **Errores:** 401, 500.
+
+**Nota de implementación:** en Express esta ruta se declara **antes** que `GET /api/incidencias/:id`. Si va después, `resumen` se interpreta como un `:id`.
 
 ### GET `/api/incidencias/:id`
 
@@ -413,7 +436,7 @@ Ejemplo de error por transición inválida:
 
 - **Rol:** `usuario` (solo si es el creador) u `operador`.
 - **Tipo de contenido:** `multipart/form-data`.
-- **Descripción:** sube una o varias imágenes asociadas a la incidencia. Para crear una incidencia con fotos, primero se crea con `POST /api/incidencias` y después se suben las imágenes con el `id_incidencia` que devuelve.
+- **Descripción:** sube una o varias imágenes asociadas a la incidencia. Para crear una incidencia con fotos, primero se crea con `POST /api/incidencias` y después se suben las imágenes con el `id_incidencia` que devuelve. El servidor guarda cada archivo con un nombre aleatorio (UUID) para que su URL no se pueda adivinar.
 
 **Campos del formulario:**
 
@@ -430,7 +453,7 @@ Ejemplo de error por transición inválida:
   {
     "id_evidencia": 7,
     "tipo": "reporte",
-    "url": "/uploads/evidencias/1762875000-lampara.jpg",
+    "url": "/uploads/evidencias/3f9c1a2e-7b4d-4c1e-9a55-0e2b8d6f1c77.jpg",
     "nombre_original": "lampara.jpg",
     "mime_type": "image/jpeg",
     "fecha_subida": "2026-11-11T15:31:00.000Z"
@@ -446,7 +469,9 @@ Ejemplo de error por transición inválida:
 
 **Respuesta 200:** lista de evidencias con el mismo formato de arriba (`[]` si no hay).
 
-`url` es relativa al servidor, sin el prefijo `/api`. Para mostrar la imagen, la app usa `<host del servidor><url>`, por ejemplo `http://localhost:3000/uploads/evidencias/1762875000-lampara.jpg`.
+`url` es relativa al servidor, sin el prefijo `/api`. Para mostrar la imagen, la app usa `<host del servidor><url>`, por ejemplo `http://localhost:3000/uploads/evidencias/3f9c1a2e-7b4d-4c1e-9a55-0e2b8d6f1c77.jpg`.
+
+Esta consulta sí exige token y permisos (el creador de la incidencia o un operador). La imagen en sí se descarga sin token porque `/uploads` es público; por eso los nombres son aleatorios y no deben subirse fotos con información personal sensible.
 
 **Errores:** 401, 403, 404, 500.
 

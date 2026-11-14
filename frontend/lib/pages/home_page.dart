@@ -227,22 +227,33 @@ class _Resumen extends StatelessWidget {
         return c != 0 ? c : a.compareTo(b);
       });
 
-    return Column(
+        return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
         Text('Total: $total', style: Theme.of(context).textTheme.bodyLarge),
         const SizedBox(height: 8),
-        GridView.count(
-          crossAxisCount: 2,
-          shrinkWrap: true,
-          physics: const NeverScrollableScrollPhysics(),
-          mainAxisSpacing: 8,
-          crossAxisSpacing: 8,
-          childAspectRatio: 1.8,
-          children: [
-            for (final e in estados)
-              _TarjetaEstado(info: _InfoEstado.de(e), cantidad: conteo[e]!),
-          ],
+        LayoutBuilder(
+          builder: (context, constraints) {
+            // Una tarjeta por cada ~170 px de ancho:
+            // 2 columnas en teléfono y hasta 5 en computadora.
+            final columnas =
+                (constraints.maxWidth / 170).floor().clamp(2, 5).toInt();
+            return GridView.builder(
+              shrinkWrap: true,
+              physics: const NeverScrollableScrollPhysics(),
+              itemCount: estados.length,
+              gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+                crossAxisCount: columnas,
+                mainAxisSpacing: 8,
+                crossAxisSpacing: 8,
+                mainAxisExtent: 60, // alto fijo: no crece con el ancho
+              ),
+              itemBuilder: (context, i) => _TarjetaEstado(
+                info: _InfoEstado.de(estados[i]),
+                cantidad: conteo[estados[i]]!,
+              ),
+            );
+          },
         ),
       ],
     );
@@ -263,36 +274,37 @@ class _TarjetaEstado extends StatelessWidget {
         ? Color.alphaBlend(
             info.acento.withValues(alpha: 0.18), AppColors.superficieOscura)
         : info.fondo;
-    return Card(
+return Card(
+      margin: EdgeInsets.zero,
       color: fondo,
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(12),
         side: BorderSide(color: info.acento),
       ),
       child: Padding(
-        padding: const EdgeInsets.all(12),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        padding: const EdgeInsets.symmetric(horizontal: 10),
+        child: Row(
           children: [
-            Row(
-              children: [
-                CircleAvatar(
-                  radius: 14,
-                  backgroundColor: info.acento,
-                  child: Icon(info.icono, size: 16, color: info.sobreAcento),
-                ),
-                const SizedBox(width: 8),
-                Expanded(
-                  child: Text(info.etiqueta,
-                      overflow: TextOverflow.ellipsis,
-                      style: theme.textTheme.labelLarge),
-                ),
-              ],
+            CircleAvatar(
+              radius: 13,
+              backgroundColor: info.acento,
+              child: Icon(info.icono, size: 15, color: info.sobreAcento),
             ),
-            Text('$cantidad',
-                style: theme.textTheme.headlineMedium
-                    ?.copyWith(fontWeight: FontWeight.bold)),
+            const SizedBox(width: 8),
+            Expanded(
+              child: Text(
+                info.etiqueta,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: theme.textTheme.bodyMedium,
+              ),
+            ),
+            const SizedBox(width: 4),
+            Text(
+              '$cantidad',
+              style: theme.textTheme.titleLarge
+                  ?.copyWith(fontWeight: FontWeight.bold),
+            ),
           ],
         ),
       ),

@@ -1,4 +1,4 @@
-// Pruebas de la F5 · Pantalla principal según el rol.
+// Pruebas de la  Pantalla principal según el rol.
 // Usan el repositorio simulado, así que no necesitan el backend.
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';

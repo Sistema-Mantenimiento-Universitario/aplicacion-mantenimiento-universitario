@@ -9,7 +9,7 @@ class ApiException implements Exception {
   final String mensaje;
   final int? statusCode;
 
-  /// 401: falta el token, es inválido o expiró (docs/api.md → Formato de errores).
+  /// 401: falta el token, es inválido o expiró (docs/api.md -> Formato de errores).
   bool get sesionExpirada => statusCode == 401;
 
   @override

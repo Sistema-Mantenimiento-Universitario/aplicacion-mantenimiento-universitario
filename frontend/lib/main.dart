@@ -1,9 +1,14 @@
 import 'package:flutter/material.dart';
 
+import 'data/auth_fake_repository.dart';
+import 'data/auth_repository.dart';
 import 'data/incidencias_fake_repository.dart';
 import 'data/incidencias_repository.dart';
+import 'data/sesion_controller.dart';
+import 'data/sesion_storage.dart';
 import 'models/usuario.dart';
 import 'pages/home_page.dart';
+import 'pages/login_page.dart';
 import 'pages/pendiente_page.dart';
 import 'pages/rutas.dart';
 import 'theme/app_theme.dart';
@@ -15,47 +20,85 @@ const String kApiBaseUrl = String.fromEnvironment(
   defaultValue: 'http://localhost:3000/api',
 );
 
+// TODO: cambiar defaultValue a true cuando el backend tenga
+// POST /api/auth/login y GET /api/incidencias/resumen.
 /// false → datos simulados. true → backend real:
-///   `flutter run -d chrome --dart-define=API_REAL=true --dart-define=API_TOKEN=TU_TOKEN`
-const bool kUsarApiReal = bool.fromEnvironment('API_REAL');
-
-/// JWT de prueba mientras no exista la pantalla de login.
-const String kTokenPrueba = String.fromEnvironment('API_TOKEN');
+///   `flutter run -d chrome --dart-define=API_REAL=true`
+const bool kUsarApiReal = bool.fromEnvironment('API_REAL', defaultValue: false);
 
 void main() {
   runApp(const MyApp());
 }
 
-class MyApp extends StatelessWidget {
-  const MyApp({super.key, this.repositorio});
+class MyApp extends StatefulWidget {
+  const MyApp({
+    super.key,
+    this.authRepository,
+    this.sesionStorage,
+    this.crearIncidenciasRepository,
+  });
 
-  /// Permite inyectar otro repositorio (lo usan las pruebas).
-  final IncidenciasRepository? repositorio;
+  /// Permiten inyectar dependencias (las usan las pruebas).
+  final AuthRepository? authRepository;
+  final SesionStorage? sesionStorage;
+  final IncidenciasRepository Function(Usuario usuario)?
+  crearIncidenciasRepository;
 
-  // TODO: reemplazar por el usuario que devuelve POST /api/auth/login.
-  // Para probar la vista del operador: id 2, Luis Pérez, Rol.operador.
-  static const Usuario usuarioDemo = Usuario(
-    id: 1,
-    nombre: 'Ana López',
-    correo: 'ana@correo.com',
-    rol: Rol.usuario,
-    token: kTokenPrueba,
-  );
+  @override
+  State<MyApp> createState() => _MyAppState();
+}
+
+class _MyAppState extends State<MyApp> {
+  late final SesionController _sesion;
+
+  @override
+  void initState() {
+    super.initState();
+    _sesion = SesionController(
+      auth:
+          widget.authRepository ??
+          (kUsarApiReal
+              ? ApiAuthRepository(baseUrl: kApiBaseUrl)
+              : FakeAuthRepository()),
+      storage: widget.sesionStorage ?? SesionStorage(),
+    )..iniciar();
+  }
+
+  @override
+  void dispose() {
+    _sesion.dispose();
+    super.dispose();
+  }
+
+  /// El token de la sesión se envía en las peticiones protegidas.
+  IncidenciasRepository _incidenciasPara(Usuario usuario) =>
+      widget.crearIncidenciasRepository?.call(usuario) ??
+      (kUsarApiReal
+          ? ApiIncidenciasRepository(baseUrl: kApiBaseUrl, token: usuario.token)
+          : FakeIncidenciasRepository(
+              idUsuario: usuario.id,
+              esOperador: usuario.esOperador,
+            ));
+
+  Widget _pantallaInicial() {
+    switch (_sesion.estado) {
+      case EstadoSesion.cargando:
+        return const _PantallaCarga();
+      case EstadoSesion.sinSesion:
+        return LoginPage(onIniciarSesion: _sesion.iniciarSesion);
+      case EstadoSesion.conSesion:
+        final usuario = _sesion.usuario!;
+        return HomePage(
+          key: ValueKey(usuario.id),
+          usuario: usuario,
+          repositorio: _incidenciasPara(usuario),
+          onCerrarSesion: _sesion.cerrarSesion,
+        );
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
-    final IncidenciasRepository repo =
-        repositorio ??
-        (kUsarApiReal
-            ? ApiIncidenciasRepository(
-                baseUrl: kApiBaseUrl,
-                token: usuarioDemo.token,
-              )
-            : FakeIncidenciasRepository(
-                idUsuario: usuarioDemo.id,
-                esOperador: usuarioDemo.esOperador,
-              ));
-
     return ValueListenableBuilder<ThemeMode>(
       valueListenable: modoTema,
       builder: (context, modo, _) => MaterialApp(
@@ -64,10 +107,12 @@ class MyApp extends StatelessWidget {
         theme: AppTheme.claro,
         darkTheme: AppTheme.oscuro,
         themeMode: modo,
-        initialRoute: Rutas.inicio,
+        // La raíz escucha la sesión: login, carga o pantalla principal.
+        home: ListenableBuilder(
+          listenable: _sesion,
+          builder: (context, _) => _pantallaInicial(),
+        ),
         routes: {
-          Rutas.inicio: (_) =>
-              HomePage(usuario: usuarioDemo, repositorio: repo),
           // Sustituye estas pantallas provisionales por las reales:
           Rutas.nuevaIncidencia: (_) =>
               const PendientePage(titulo: 'Nueva incidencia'),
@@ -78,5 +123,14 @@ class MyApp extends StatelessWidget {
         },
       ),
     );
+  }
+}
+
+class _PantallaCarga extends StatelessWidget {
+  const _PantallaCarga();
+
+  @override
+  Widget build(BuildContext context) {
+    return const Scaffold(body: Center(child: CircularProgressIndicator()));
   }
 }

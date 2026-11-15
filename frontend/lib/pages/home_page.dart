@@ -28,13 +28,22 @@ class _HomePageState extends State<HomePage> {
   @override
   void initState() {
     super.initState();
-    _resumen = widget.repositorio.obtenerResumenPorEstado();
+    _resumen = _pedirResumen();
   }
 
   void _cargar() {
     setState(() {
-      _resumen = widget.repositorio.obtenerResumenPorEstado();
+      _resumen = _pedirResumen();
     });
+  }
+
+  Future<Map<String, int>> _pedirResumen() async {
+    try {
+      return await widget.repositorio.obtenerResumenPorEstado();
+    } on ApiException catch (e) {
+      if (e.sesionExpirada) widget.onCerrarSesion?.call();
+      rethrow;
+    }
   }
 
   Future<void> _refrescar() async {

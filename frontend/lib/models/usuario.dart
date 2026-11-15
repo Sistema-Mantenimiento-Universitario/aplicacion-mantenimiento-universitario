@@ -38,4 +38,10 @@ class Usuario {
         rol: Rol.fromString(json['rol'] as String?),
         token: token,
       );
+  Map<String, dynamic> toJson() => {
+    'id_usuario': id,
+    'nombre': nombre,
+    'correo': correo,
+    'rol': rol.name,
+  };
 }

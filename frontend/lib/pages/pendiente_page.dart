@@ -11,10 +11,7 @@ class PendientePage extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        title: Text(titulo),
-        actions: const [BotonTema()],
-      ),
+      appBar: AppBar(title: Text(titulo), actions: const [BotonTema()]),
       body: const Center(child: Text('Pantalla en construcción')),
     );
   }

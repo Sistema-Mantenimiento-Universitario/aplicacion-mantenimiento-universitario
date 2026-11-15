@@ -43,9 +43,9 @@ class ApiIncidenciasRepository implements IncidenciasRepository {
   final http.Client _client;
 
   Map<String, String> get _headers => {
-        'Accept': 'application/json',
-        if (token != null && token!.isNotEmpty) 'Authorization': 'Bearer $token',
-      };
+    'Accept': 'application/json',
+    if (token != null && token!.isNotEmpty) 'Authorization': 'Bearer $token',
+  };
 
   /// GET /api/incidencias/resumen
   ///
@@ -97,9 +97,9 @@ class ApiIncidenciasRepository implements IncidenciasRepository {
   }
 
   static String _mensajePorCodigo(int codigo) => switch (codigo) {
-        401 => 'Sesión expirada. Inicia sesión de nuevo',
-        403 => 'No tienes permiso para ver esta información',
-        404 => 'El servidor no tiene el endpoint del resumen',
-        _ => 'Error $codigo al obtener el resumen',
-      };
+    401 => 'Sesión expirada. Inicia sesión de nuevo',
+    403 => 'No tienes permiso para ver esta información',
+    404 => 'El servidor no tiene el endpoint del resumen',
+    _ => 'Error $codigo al obtener el resumen',
+  };
 }

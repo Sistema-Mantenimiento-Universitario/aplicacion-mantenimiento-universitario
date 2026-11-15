@@ -5,7 +5,7 @@ import '../models/usuario.dart';
 import '../theme/app_theme.dart';
 import 'rutas.dart';
 
-/// F5 · Pantalla principal según el rol.
+/// F5 Pantalla principal según el rol.
 class HomePage extends StatefulWidget {
   const HomePage({
     super.key,
@@ -134,8 +134,11 @@ class _HomePageState extends State<HomePage> {
             for (final acceso in _accesos)
               Card(
                 child: ListTile(
-                  leading: Icon(acceso.icono,
-                      color: theme.colorScheme.primary, size: 32),
+                  leading: Icon(
+                    acceso.icono,
+                    color: theme.colorScheme.primary,
+                    size: 32,
+                  ),
                   title: Text(acceso.titulo),
                   subtitle: Text(acceso.subtitulo),
                   trailing: const Icon(Icons.chevron_right),
@@ -186,8 +189,10 @@ class _Saludo extends StatelessWidget {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text('Hola, ${usuario.nombre}',
-                  style: theme.textTheme.titleLarge),
+              Text(
+                'Hola, ${usuario.nombre}',
+                style: theme.textTheme.titleLarge,
+              ),
               const SizedBox(height: 4),
               Chip(
                 label: Text(usuario.rol.etiqueta),
@@ -227,7 +232,7 @@ class _Resumen extends StatelessWidget {
         return c != 0 ? c : a.compareTo(b);
       });
 
-        return Column(
+    return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
         Text('Total: $total', style: Theme.of(context).textTheme.bodyLarge),
@@ -236,8 +241,10 @@ class _Resumen extends StatelessWidget {
           builder: (context, constraints) {
             // Una tarjeta por cada ~170 px de ancho:
             // 2 columnas en teléfono y hasta 5 en computadora.
-            final columnas =
-                (constraints.maxWidth / 170).floor().clamp(2, 5).toInt();
+            final columnas = (constraints.maxWidth / 170)
+                .floor()
+                .clamp(2, 5)
+                .toInt();
             return GridView.builder(
               shrinkWrap: true,
               physics: const NeverScrollableScrollPhysics(),
@@ -272,9 +279,11 @@ class _TarjetaEstado extends StatelessWidget {
     // En modo oscuro se usa un tinte del color de acento sobre la superficie.
     final fondo = oscuro
         ? Color.alphaBlend(
-            info.acento.withValues(alpha: 0.18), AppColors.superficieOscura)
+            info.acento.withValues(alpha: 0.18),
+            AppColors.superficieOscura,
+          )
         : info.fondo;
-return Card(
+    return Card(
       margin: EdgeInsets.zero,
       color: fondo,
       shape: RoundedRectangleBorder(
@@ -302,8 +311,9 @@ return Card(
             const SizedBox(width: 4),
             Text(
               '$cantidad',
-              style: theme.textTheme.titleLarge
-                  ?.copyWith(fontWeight: FontWeight.bold),
+              style: theme.textTheme.titleLarge?.copyWith(
+                fontWeight: FontWeight.bold,
+              ),
             ),
           ],
         ),

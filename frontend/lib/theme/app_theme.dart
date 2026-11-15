@@ -81,8 +81,9 @@ class AppTheme {
         side: BorderSide.none,
       ),
       listTileTheme: const ListTileThemeData(iconColor: AppColors.morado),
-      progressIndicatorTheme:
-          const ProgressIndicatorThemeData(color: AppColors.morado),
+      progressIndicatorTheme: const ProgressIndicatorThemeData(
+        color: AppColors.morado,
+      ),
       floatingActionButtonTheme: const FloatingActionButtonThemeData(
         backgroundColor: AppColors.morado,
         foregroundColor: AppColors.blanco,
@@ -140,8 +141,9 @@ class AppTheme {
         side: BorderSide.none,
       ),
       listTileTheme: const ListTileThemeData(iconColor: AppColors.lilaClaro),
-      progressIndicatorTheme:
-          const ProgressIndicatorThemeData(color: AppColors.lilaClaro),
+      progressIndicatorTheme: const ProgressIndicatorThemeData(
+        color: AppColors.lilaClaro,
+      ),
       floatingActionButtonTheme: const FloatingActionButtonThemeData(
         backgroundColor: AppColors.morado,
         foregroundColor: AppColors.blanco,

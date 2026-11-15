@@ -4,9 +4,9 @@ import 'incidencias_repository.dart';
 /// Se usa mientras el backend no tenga GET /api/incidencias/resumen.
 ///
 /// Usuarios simulados:
-///   1 · Ana López     · usuario
-///   2 · Luis Pérez    · operador
-///   3 · Beatriz Gómez · usuario
+///   1 · Ana López      usuario
+///   2 · Luis Pérez     operador
+///   3 · Beatriz Gómez  usuario
 class FakeIncidenciasRepository implements IncidenciasRepository {
   FakeIncidenciasRepository({
     required this.idUsuario,

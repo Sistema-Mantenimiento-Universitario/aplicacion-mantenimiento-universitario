@@ -40,18 +40,20 @@ Future<void> _abrirHome(
   tester.view.devicePixelRatio = 1.0;
   addTearDown(tester.view.reset);
 
-  await tester.pumpWidget(MaterialApp(
-    theme: AppTheme.claro,
-    home: HomePage(usuario: usuario, repositorio: repositorio),
-  ));
+  await tester.pumpWidget(
+    MaterialApp(
+      theme: AppTheme.claro,
+      home: HomePage(usuario: usuario, repositorio: repositorio),
+    ),
+  );
   await tester.pumpAndSettle();
 }
 
 FakeIncidenciasRepository _fake(Usuario u) => FakeIncidenciasRepository(
-      idUsuario: u.id,
-      esOperador: u.esOperador,
-      demora: Duration.zero,
-    );
+  idUsuario: u.id,
+  esOperador: u.esOperador,
+  demora: Duration.zero,
+);
 
 void main() {
   testWidgets('Usuario: ve su resumen y sus accesos', (tester) async {
@@ -67,8 +69,9 @@ void main() {
     expect(find.text('Administración de incidencias'), findsNothing);
   });
 
-  testWidgets('Operador: ve todas las incidencias y la administración',
-      (tester) async {
+  testWidgets('Operador: ve todas las incidencias y la administración', (
+    tester,
+  ) async {
     await _abrirHome(tester, _luis, _fake(_luis));
 
     expect(find.text('Total: 7'), findsOneWidget);

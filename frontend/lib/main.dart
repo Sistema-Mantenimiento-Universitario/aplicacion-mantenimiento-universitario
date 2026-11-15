@@ -44,7 +44,8 @@ class MyApp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final IncidenciasRepository repo = repositorio ??
+    final IncidenciasRepository repo =
+        repositorio ??
         (kUsarApiReal
             ? ApiIncidenciasRepository(
                 baseUrl: kApiBaseUrl,

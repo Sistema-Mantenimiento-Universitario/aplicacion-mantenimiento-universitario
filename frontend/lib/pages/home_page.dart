@@ -351,8 +351,6 @@ class _ErrorResumen extends StatelessWidget {
   }
 }
 
-/// Etiqueta, icono y colores de cada estado. Ajusta los nombres a los
-/// valores exactos que devuelve tu API.
 class _InfoEstado {
   const _InfoEstado({
     required this.etiqueta,

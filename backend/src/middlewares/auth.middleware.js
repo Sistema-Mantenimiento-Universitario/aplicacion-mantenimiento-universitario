@@ -28,4 +28,24 @@ const verificarToken = (req, res, next) => {
   next();
 };
 
-module.exports = { verificarToken };
+const verificarRol = (...rolesPermitidos) => {
+    return (req, res, next) => {
+        if (!req.usuario) {
+            return res.status(401).json({
+                ok: false,
+                mensaje: "No autenticado",
+            });
+        }
+
+        if (!rolesPermitidos.includes(req.usuario.rol)) {
+            return res.status(403).json({
+                ok: false,
+                mensaje: "No tienes permiso para realizar esta acción",
+            });
+        }
+
+        next();
+    };
+};
+
+module.exports = { verificarToken, verificarRol };

@@ -5,8 +5,8 @@ import 'incidencias_repository.dart' show ApiException;
 /// Login simulado mientras el backend no tenga /api/auth/login.
 ///
 /// Usuarios de prueba:
-///   ana@correo.com  / Ana12345  · usuario
-///   luis@correo.com / Luis12345 · operador
+///   ana@correo.com  / Ana12345  usuario
+///   luis@correo.com / Luis12345  operador
 class FakeAuthRepository implements AuthRepository {
   FakeAuthRepository({this.demora = const Duration(milliseconds: 600)});
 

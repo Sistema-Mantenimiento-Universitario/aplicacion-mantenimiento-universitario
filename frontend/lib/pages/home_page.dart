@@ -5,7 +5,7 @@ import '../models/usuario.dart';
 import '../theme/app_theme.dart';
 import 'rutas.dart';
 
-/// F5 Pantalla principal según el rol.
+///  Pantalla principal según el rol.
 class HomePage extends StatefulWidget {
   const HomePage({
     super.key,

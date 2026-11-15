@@ -1,4 +1,4 @@
-// Pruebas de la F4  Inicio de sesión y manejo de sesión.
+// Pruebas de la  Inicio de sesión y manejo de sesión.
 // Usan el login simulado y SharedPreferences en memoria.
 import 'dart:convert';
 

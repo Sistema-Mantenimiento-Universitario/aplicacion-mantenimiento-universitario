@@ -6,7 +6,7 @@ import 'package:http/http.dart' as http;
 import '../models/usuario.dart';
 import 'incidencias_repository.dart' show ApiException;
 
-/// Autenticación (docs/api.md → Autenticación).
+/// Autenticación (docs/api.md -> Autenticación).
 /// Implementaciones:
 ///  - [ApiAuthRepository]: consume el backend real.
 ///  - FakeAuthRepository (auth_fake_repository.dart): usuarios de prueba.

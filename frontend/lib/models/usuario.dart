@@ -1,4 +1,4 @@
-/// Roles disponibles (docs/api.md → Convenciones → Roles).
+/// Roles disponibles (docs/api.md -> Convenciones -> Roles).
 enum Rol {
   usuario,
   operador;
@@ -10,7 +10,7 @@ enum Rol {
 }
 
 /// Usuario autenticado. Los campos siguen el contrato de la API
-/// (respuesta de POST /api/auth/login → "usuario", y GET /api/auth/perfil).
+/// (respuesta de POST /api/auth/login -> "usuario", y GET /api/auth/perfil).
 class Usuario {
   const Usuario({
     required this.id,

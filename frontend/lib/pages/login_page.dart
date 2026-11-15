@@ -3,7 +3,7 @@ import 'package:flutter/material.dart';
 import '../data/incidencias_repository.dart' show ApiException;
 import '../theme/app_theme.dart';
 
-/// F4  Pantalla de inicio de sesión.
+///   Pantalla de inicio de sesión.
 class LoginPage extends StatefulWidget {
   const LoginPage({super.key, required this.onIniciarSesion});
 

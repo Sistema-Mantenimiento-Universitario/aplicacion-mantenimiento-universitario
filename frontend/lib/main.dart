@@ -22,7 +22,7 @@ const String kApiBaseUrl = String.fromEnvironment(
 
 // TODO: cambiar defaultValue a true cuando el backend tenga
 // POST /api/auth/login y GET /api/incidencias/resumen.
-/// false → datos simulados. true → backend real:
+/// false -> datos simulados. true -> backend real:
 ///   `flutter run -d chrome --dart-define=API_REAL=true`
 const bool kUsarApiReal = bool.fromEnvironment('API_REAL', defaultValue: false);
 

@@ -164,7 +164,12 @@ void main() {
     await _iniciarSesion(tester, 'luis@correo.com', 'Luis12345');
     expect(find.text('Hola, Luis Pérez'), findsOneWidget);
 
-    await tester.tap(find.byTooltip('Cerrar sesión'));
+    // El botón de cerrar sesión está en el perfil
+    await tester.tap(find.byTooltip('Perfil'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Cerrar sesión'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Salir'));
     await tester.pumpAndSettle();
 
     expect(find.text('Entrar'), findsOneWidget);

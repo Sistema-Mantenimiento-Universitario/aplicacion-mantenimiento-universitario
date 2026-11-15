@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import 'data/auth_fake_repository.dart';
+import 'data/preferencias_storage.dart';
 import 'data/auth_repository.dart';
 import 'data/incidencias_fake_repository.dart';
 import 'data/incidencias_repository.dart';
@@ -26,7 +27,10 @@ const String kApiBaseUrl = String.fromEnvironment(
 ///   `flutter run -d chrome --dart-define=API_REAL=true`
 const bool kUsarApiReal = bool.fromEnvironment('API_REAL', defaultValue: false);
 
-void main() {
+Future<void> main() async {
+  WidgetsFlutterBinding.ensureInitialized();
+  // Carga el tema guardado antes de mostrar la app
+  await iniciarPreferenciaTema();
   runApp(const MyApp());
 }
 

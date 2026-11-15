@@ -4,6 +4,7 @@ import '../data/incidencias_repository.dart';
 import '../models/usuario.dart';
 import '../theme/app_theme.dart';
 import 'rutas.dart';
+import 'perfil_page.dart';
 
 ///  Pantalla principal según el rol.
 class HomePage extends StatefulWidget {
@@ -44,6 +45,17 @@ class _HomePageState extends State<HomePage> {
       if (e.sesionExpirada) widget.onCerrarSesion?.call();
       rethrow;
     }
+  }
+
+  void _abrirPerfil() {
+    Navigator.of(context).push(
+      MaterialPageRoute<void>(
+        builder: (_) => PerfilPage(
+          usuario: widget.usuario,
+          onCerrarSesion: widget.onCerrarSesion ?? () {},
+        ),
+      ),
+    );
   }
 
   Future<void> _refrescar() async {
@@ -102,12 +114,11 @@ class _HomePageState extends State<HomePage> {
             icon: const Icon(Icons.refresh),
             onPressed: _cargar,
           ),
-          if (widget.onCerrarSesion != null)
-            IconButton(
-              tooltip: 'Cerrar sesión',
-              icon: const Icon(Icons.logout),
-              onPressed: widget.onCerrarSesion,
-            ),
+          IconButton(
+            tooltip: 'Perfil',
+            icon: const Icon(Icons.account_circle_outlined),
+            onPressed: _abrirPerfil,
+          ),
         ],
       ),
       body: RefreshIndicator(

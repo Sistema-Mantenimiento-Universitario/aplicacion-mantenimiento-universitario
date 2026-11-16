@@ -557,7 +557,7 @@ class _SeccionFiltro<T> extends StatelessWidget {
       backgroundColor: fondo,
       // Elegido: el mismo color, un poco más intenso.
       selectedColor: Color.alphaBlend(borde.withValues(alpha: 0.35), fondo),
-      checkmarkColor: colorTexto,
+      showCheckmark: false,
       side: BorderSide(color: borde, width: elegido ? 2 : 1),
       selected: elegido,
       onSelected: (_) => _tocar(valor),
@@ -582,11 +582,18 @@ class _SeccionFiltro<T> extends StatelessWidget {
               dense: true,
               contentPadding: const EdgeInsets.symmetric(horizontal: 8),
               leading: estilo == null ? null : _IconoEstado(estilo!(valor)),
-              title: Text(texto),
+              title: Text(texto,
+                style: valor == seleccionado
+                    ? const TextStyle(fontWeight: FontWeight.bold)
+                    : null,
+              ),
               selected: valor == seleccionado,
-              trailing: valor == seleccionado
-                  ? Icon(Icons.check, color: theme.colorScheme.primary)
-                  : null,
+              selectedTileColor: theme.colorScheme.primary.withValues(
+                alpha: 0.12,
+              ),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(8),
+              ),
               onTap: () => _tocar(valor),
             ),
         ],

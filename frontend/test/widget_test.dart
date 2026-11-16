@@ -5,6 +5,9 @@ import 'package:flutter_test/flutter_test.dart';
 
 import 'package:mantenimiento_universitario/data/incidencias_fake_repository.dart';
 import 'package:mantenimiento_universitario/data/incidencias_repository.dart';
+import 'package:mantenimiento_universitario/models/categoria.dart';
+import 'package:mantenimiento_universitario/models/estado_incidencia.dart';
+import 'package:mantenimiento_universitario/models/incidencia.dart';
 import 'package:mantenimiento_universitario/models/usuario.dart';
 import 'package:mantenimiento_universitario/pages/home_page.dart';
 import 'package:mantenimiento_universitario/theme/app_theme.dart';
@@ -27,6 +30,16 @@ const _luis = Usuario(
 class _RepositorioConError implements IncidenciasRepository {
   @override
   Future<Map<String, int>> obtenerResumenPorEstado() async =>
+      throw ApiException('No se pudo conectar con el servidor');
+  @override
+  Future<List<Incidencia>> obtenerIncidencias({
+    String? texto,
+    EstadoIncidencia? estado,
+    int? idCategoria,
+  }) async => throw ApiException('No se pudo conectar con el servidor');
+
+  @override
+  Future<List<Categoria>> obtenerCategorias() async =>
       throw ApiException('No se pudo conectar con el servidor');
 }
 

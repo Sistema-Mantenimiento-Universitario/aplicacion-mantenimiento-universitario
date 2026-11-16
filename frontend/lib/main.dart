@@ -9,6 +9,7 @@ import 'data/sesion_controller.dart';
 import 'data/sesion_storage.dart';
 import 'models/usuario.dart';
 import 'pages/home_page.dart';
+import 'pages/listado_incidencias_page.dart';
 import 'pages/login_page.dart';
 import 'pages/pendiente_page.dart';
 import 'pages/rutas.dart';
@@ -22,7 +23,8 @@ const String kApiBaseUrl = String.fromEnvironment(
 );
 
 // TODO: cambiar defaultValue a true cuando el backend tenga
-// POST /api/auth/login y GET /api/incidencias/resumen.
+// POST /api/auth/login, GET /api/incidencias/resumen,
+// GET /api/incidencias y GET /api/categorias.
 /// false -> datos simulados. true -> backend real:
 ///   `flutter run -d chrome --dart-define=API_REAL=true`
 const bool kUsarApiReal = bool.fromEnvironment('API_REAL', defaultValue: false);
@@ -83,6 +85,16 @@ class _MyAppState extends State<MyApp> {
               idUsuario: usuario.id,
               esOperador: usuario.esOperador,
             ));
+  // Listado con el repositorio y el token de la sesión actual
+  Widget _listado() {
+    final usuario = _sesion.usuario;
+    if (usuario == null) return const _PantallaCarga();
+    return ListadoIncidenciasPage(
+      usuario: usuario,
+      repositorio: _incidenciasPara(usuario),
+      onSesionExpirada: _sesion.cerrarSesion,
+    );
+  }
 
   Widget _pantallaInicial() {
     switch (_sesion.estado) {
@@ -120,8 +132,9 @@ class _MyAppState extends State<MyApp> {
           // Sustituye estas pantallas provisionales por las reales:
           Rutas.nuevaIncidencia: (_) =>
               const PendientePage(titulo: 'Nueva incidencia'),
-          Rutas.misIncidencias: (_) =>
-              const PendientePage(titulo: 'Mis incidencias'),
+          Rutas.misIncidencias: (_) => _listado(),
+          Rutas.detalleIncidencia: (_) =>
+              const PendientePage(titulo: 'Detalle de incidencia'),
           Rutas.adminIncidencias: (_) =>
               const PendientePage(titulo: 'Administración de incidencias'),
         },

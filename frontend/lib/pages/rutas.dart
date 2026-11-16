@@ -4,4 +4,6 @@ class Rutas {
   static const nuevaIncidencia = '/incidencias/nueva';
   static const misIncidencias = '/incidencias/mias';
   static const adminIncidencias = '/incidencias/admin';
+  static const detalleIncidencia =
+      '/incidencias/detalle'; // Recibe el id_incidencia
 }

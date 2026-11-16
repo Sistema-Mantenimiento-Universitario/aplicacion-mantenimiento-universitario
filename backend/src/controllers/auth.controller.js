@@ -1,6 +1,6 @@
 const bcrypt = require("bcrypt");
 const jwt = require("jsonwebtoken");
-const { buscarPorCorreo } = require("../models/usuario.model");
+const { buscarPorCorreo, buscarPorId } = require("../models/usuario.model");
 
 const login = async (req, res) => {
   const { correo, password } = req.body ?? {};
@@ -52,4 +52,25 @@ const login = async (req, res) => {
   }
 };
 
-module.exports = { login };
+const perfil = async (req, res) => {
+  try {
+    // el token puede seguir vigente aunque el usuario ya no exista o lo hayan desactivado
+    const usuario = await buscarPorId(req.usuario.id_usuario);
+
+    if (!usuario || !usuario.activo) {
+      return res.status(401).json({ ok: false, mensaje: "Usuario no válido. Inicia sesión de nuevo" });
+    }
+
+    return res.json({
+      id_usuario: usuario.id_usuario,
+      nombre: usuario.nombre,
+      correo: usuario.correo,
+      rol: usuario.rol,
+    });
+  } catch (error) {
+    console.error(error);
+    return res.status(500).json({ ok: false, mensaje: "Error interno del servidor" });
+  }
+};
+
+module.exports = { login, perfil };

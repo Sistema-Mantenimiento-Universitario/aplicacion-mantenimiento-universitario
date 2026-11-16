@@ -23,4 +23,8 @@ const buscarPorCorreo = async (correo) => {
   return usuarios.find((u) => u.correo === correo) ?? null;
 };
 
-module.exports = { buscarPorCorreo };
+const buscarPorId = async (idUsuario) => {
+  return usuarios.find((u) => u.id_usuario === idUsuario) ?? null;
+};
+
+module.exports = { buscarPorCorreo, buscarPorId };

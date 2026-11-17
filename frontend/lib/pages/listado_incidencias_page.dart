@@ -462,7 +462,7 @@ class _TarjetaIncidencia extends StatelessWidget {
           children: [
             const SizedBox(height: 4),
             Text(
-              '${incidencia.categoria.nombre} · '
+              '${incidencia.categoria.nombre}   '
               '${_formatearFecha(incidencia.fechaCreacion)}',
             ),
             if (mostrarReportante)

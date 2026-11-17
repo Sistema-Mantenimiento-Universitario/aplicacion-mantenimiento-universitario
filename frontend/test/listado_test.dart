@@ -106,7 +106,7 @@ void main() {
     // Es de Beatriz, así que Ana no la ve.
     expect(find.text('Proyector sin imagen'), findsNothing);
     // Categoría y fecha en cada elemento.
-    expect(find.text('Electricidad · 12/11/2026 09:15'), findsOneWidget);
+        expect(find.text('Electricidad   12/11/2026 09:15'), findsOneWidget);
   });
 
   testWidgets('El operador ve todas y quién las reportó', (tester) async {

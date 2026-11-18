@@ -582,7 +582,8 @@ class _SeccionFiltro<T> extends StatelessWidget {
               dense: true,
               contentPadding: const EdgeInsets.symmetric(horizontal: 8),
               leading: estilo == null ? null : _IconoEstado(estilo!(valor)),
-              title: Text(texto,
+              title: Text(
+                texto,
                 style: valor == seleccionado
                     ? const TextStyle(fontWeight: FontWeight.bold)
                     : null,

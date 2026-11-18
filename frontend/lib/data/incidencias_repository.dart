@@ -6,14 +6,18 @@ import 'package:http/http.dart' as http;
 import '../models/categoria.dart';
 import '../models/estado_incidencia.dart';
 import '../models/incidencia.dart';
+import '../models/datos_incidencia.dart';
 
 /// Error de la API con el mensaje listo para mostrarse al usuario.
 class ApiException implements Exception {
-  ApiException(this.mensaje, {this.statusCode});
+  ApiException(this.mensaje, {this.statusCode, this.errores = const {}});
   final String mensaje;
   final int? statusCode;
 
-  /// 401: falta el token, es inválido o expiró (docs/api.md -> Formato de errores).
+  // Errores de validación por campo (solo en 400)
+  final Map<String, String> errores;
+
+  /// 401: falta el token, es inválido o expiró
   bool get sesionExpirada => statusCode == 401;
 
   @override
@@ -41,6 +45,12 @@ abstract class IncidenciasRepository {
 
   /// Categorías para el filtro del listado y para el formulario.
   Future<List<Categoria>> obtenerCategorias();
+
+  // Crea una incidencia en estado pendiente y la devuelve
+  Future<Incidencia> crearIncidencia(DatosIncidencia datos);
+
+  // Edita una incidencia pendiente del usuario y la devuelve actualizada
+  Future<Incidencia> editarIncidencia(int id, DatosIncidencia datos);
 }
 
 class ApiIncidenciasRepository implements IncidenciasRepository {
@@ -58,6 +68,12 @@ class ApiIncidenciasRepository implements IncidenciasRepository {
   Map<String, String> get _headers => {
     'Accept': 'application/json',
     if (token != null && token!.isNotEmpty) 'Authorization': 'Bearer $token',
+  };
+
+  // Encabezados para enviar un cuerpo en JSON (POST y PUT)
+  Map<String, String> get _headersJson => {
+    ..._headers,
+    'Content-Type': 'application/json',
   };
 
   /// GET /api/incidencias/resumen
@@ -119,13 +135,49 @@ class ApiIncidenciasRepository implements IncidenciasRepository {
     return _convertirLista(body, Categoria.fromJson);
   }
 
+  // POST /api/incidencias. Respuesta 201: el objeto incidencia
+  @override
+  Future<Incidencia> crearIncidencia(DatosIncidencia datos) async {
+    final body = await _procesar(
+      _client.post(
+        Uri.parse('$baseUrl/incidencias'),
+        headers: _headersJson,
+        body: jsonEncode(datos.toJson()),
+      ),
+      recurso: 'la incidencia',
+      codigoEsperado: 201,
+    );
+    return _convertirIncidencia(body);
+  }
+
+  // PUT /api/incidencias/:id. Respuesta 200: el objeto incidencia actualizado
+  @override
+  Future<Incidencia> editarIncidencia(int id, DatosIncidencia datos) async {
+    final body = await _procesar(
+      _client.put(
+        Uri.parse('$baseUrl/incidencias/$id'),
+        headers: _headersJson,
+        body: jsonEncode(datos.toJson()),
+      ),
+      recurso: 'la incidencia',
+    );
+    return _convertirIncidencia(body);
+  }
+
   // Hace un GET y devuelve el JSON, o lanza una excepción
-  Future<dynamic> _getJson(Uri uri, {required String recurso}) async {
+  Future<dynamic> _getJson(Uri uri, {required String recurso}) =>
+      _procesar(_client.get(uri, headers: _headers), recurso: recurso);
+  // Espera la respuesta de cualquier petición y devuelve el JSON.
+  // Si el código no es el esperado, lanza ApiException con el mensaje
+  // del backend y los errores por campo
+  Future<dynamic> _procesar(
+    Future<http.Response> peticion, {
+    required String recurso,
+    int codigoEsperado = 200,
+  }) async {
     final http.Response res;
     try {
-      res = await _client
-          .get(uri, headers: _headers)
-          .timeout(const Duration(seconds: 15));
+      res = await peticion.timeout(const Duration(seconds: 15));
     } on TimeoutException {
       throw ApiException('El servidor tardó demasiado en responder');
     } catch (_) {
@@ -139,14 +191,37 @@ class ApiIncidenciasRepository implements IncidenciasRepository {
       body = null;
     }
 
-    if (res.statusCode != 200) {
+    if (res.statusCode != codigoEsperado) {
       final mensaje = body is Map ? body['mensaje'] as String? : null;
       throw ApiException(
         mensaje ?? _mensajePorCodigo(res.statusCode, recurso),
         statusCode: res.statusCode,
+        errores: _leerErrores(body),
       );
     }
     return body;
+  }
+
+  // Convierte "errores" en un mapa
+  static Map<String, String> _leerErrores(dynamic body) {
+    final errores = body is Map ? body['errores'] : null;
+    if (errores is! List) return const {};
+    return {
+      for (final error in errores)
+        if (error is Map &&
+            error['campo'] is String &&
+            error['mensaje'] is String)
+          error['campo'] as String: error['mensaje'] as String,
+    };
+  }
+
+  // Convierte un objeto incidencia; si no tiene el formato del contrato, lanza excepción
+  static Incidencia _convertirIncidencia(dynamic body) {
+    try {
+      return Incidencia.fromJson(body as Map<String, dynamic>);
+    } catch (_) {
+      throw ApiException('Respuesta inesperada del servidor');
+    }
   }
 
   // Convierte una lista JSON; si algún elemento no tiene el formato del contrato, lanza excepción
@@ -167,8 +242,8 @@ class ApiIncidenciasRepository implements IncidenciasRepository {
   static String _mensajePorCodigo(int codigo, String recurso) =>
       switch (codigo) {
         401 => 'Sesión expirada. Inicia sesión de nuevo',
-        403 => 'No tienes permiso para ver esta información',
+        403 => 'No tienes permiso para realziar esta acción',
         404 => 'El servidor no encontró el $recurso (404)',
-        _ => 'Error $codigo al obtener el resumen',
+        _ => 'Error $codigo al obtener el $recurso',
       };
 }

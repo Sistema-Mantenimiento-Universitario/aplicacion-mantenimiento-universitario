@@ -7,7 +7,9 @@ import 'data/incidencias_fake_repository.dart';
 import 'data/incidencias_repository.dart';
 import 'data/sesion_controller.dart';
 import 'data/sesion_storage.dart';
+import 'models/incidencia.dart';
 import 'models/usuario.dart';
+import 'pages/formulario_incidencia_page.dart';
 import 'pages/home_page.dart';
 import 'pages/listado_incidencias_page.dart';
 import 'pages/login_page.dart';
@@ -24,8 +26,9 @@ const String kApiBaseUrl = String.fromEnvironment(
 
 // TODO: cambiar defaultValue a true cuando el backend tenga
 // POST /api/auth/login, GET /api/incidencias/resumen,
-// GET /api/incidencias y GET /api/categorias.
-/// false -> datos simulados. true -> backend real:
+// GET /api/incidencias y GET /api/categorias,
+// POST /api/incidencias y PUT /api/incidencias/:id.
+/// false: datos simulados. true backend real:
 ///   `flutter run -d chrome --dart-define=API_REAL=true`
 const bool kUsarApiReal = bool.fromEnvironment('API_REAL', defaultValue: false);
 
@@ -85,14 +88,38 @@ class _MyAppState extends State<MyApp> {
               idUsuario: usuario.id,
               esOperador: usuario.esOperador,
             ));
+
+  // Las rutas internas escuchan la sesión. Al recargar la página en web,
+  // la sesión todavía se está leyendo y la pantalla se actualiza al terminar
+  Widget _conSesion(Widget Function(Usuario usuario) pantalla) {
+    return ListenableBuilder(
+      listenable: _sesion,
+      builder: (context, _) => switch (_sesion.estado) {
+        EstadoSesion.cargando => const _PantallaCarga(),
+        EstadoSesion.sinSesion => LoginPage(
+          onIniciarSesion: _sesion.iniciarSesion,
+        ),
+        EstadoSesion.conSesion => pantalla(_sesion.usuario!),
+      },
+    );
+  }
   // Listado con el repositorio y el token de la sesión actual
-  Widget _listado() {
-    final usuario = _sesion.usuario;
-    if (usuario == null) return const _PantallaCarga();
-    return ListadoIncidenciasPage(
+  Widget _listado() => _conSesion((usuario) => ListadoIncidenciasPage(
       usuario: usuario,
       repositorio: _incidenciasPara(usuario),
       onSesionExpirada: _sesion.cerrarSesion,
+    ),
+  );
+
+  // Si la ruta recibe una Incidencia se abre en modo edición
+  Widget _formulario(BuildContext context) {
+    final argumento = ModalRoute.of(context)?.settings.arguments;
+    return _conSesion((usuario) => FormularioIncidenciaPage(
+      usuario: usuario,
+      repositorio: _incidenciasPara(usuario),
+      incidencia: argumento is Incidencia ? argumento : null,
+      onSesionExpirada: _sesion.cerrarSesion,
+      ),
     );
   }
 
@@ -130,8 +157,8 @@ class _MyAppState extends State<MyApp> {
         ),
         routes: {
           // Sustituye estas pantallas provisionales por las reales:
-          Rutas.nuevaIncidencia: (_) =>
-              const PendientePage(titulo: 'Nueva incidencia'),
+          Rutas.nuevaIncidencia: _formulario,
+          Rutas.editarIncidencia: _formulario,
           Rutas.misIncidencias: (_) => _listado(),
           Rutas.detalleIncidencia: (_) =>
               const PendientePage(titulo: 'Detalle de incidencia'),

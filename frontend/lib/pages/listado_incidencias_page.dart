@@ -462,7 +462,7 @@ class _TarjetaIncidencia extends StatelessWidget {
           children: [
             const SizedBox(height: 4),
             Text(
-              '${incidencia.categoria.nombre} · '
+              '${incidencia.categoria.nombre}   '
               '${_formatearFecha(incidencia.fechaCreacion)}',
             ),
             if (mostrarReportante)
@@ -582,7 +582,8 @@ class _SeccionFiltro<T> extends StatelessWidget {
               dense: true,
               contentPadding: const EdgeInsets.symmetric(horizontal: 8),
               leading: estilo == null ? null : _IconoEstado(estilo!(valor)),
-              title: Text(texto,
+              title: Text(
+                texto,
                 style: valor == seleccionado
                     ? const TextStyle(fontWeight: FontWeight.bold)
                     : null,

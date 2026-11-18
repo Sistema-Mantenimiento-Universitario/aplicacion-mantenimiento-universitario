@@ -2,6 +2,7 @@ import '../models/categoria.dart';
 import '../models/estado_incidencia.dart';
 import '../models/incidencia.dart';
 import 'incidencias_repository.dart';
+import '../models/datos_incidencia.dart';
 
 /// Datos simulados con los estados y roles del contrato (docs/api.md).
 /// Se usa mientras el backend no tenga GET /api/incidencias/resumen.
@@ -32,6 +33,10 @@ class FakeIncidenciasRepository implements IncidenciasRepository {
   static const _ana = PersonaIncidencia(id: 1, nombre: 'Ana López');
   static const _luis = PersonaIncidencia(id: 2, nombre: 'Luis Pérez');
   static const _beatriz = PersonaIncidencia(id: 3, nombre: 'Beatriz Gómez');
+
+  static const _personas = [_ana, _luis, _beatriz];
+  // Id para la siguiente incidencia nueva
+  static int _siguienteId = 8;
 
   static final _incidencias = [
     Incidencia(
@@ -154,6 +159,74 @@ class FakeIncidenciasRepository implements IncidenciasRepository {
     await _esperar();
     return _categorias;
   }
+
+  @override
+  Future<Incidencia> crearIncidencia(DatosIncidencia datos) async {
+    await _esperar();
+    final nueva = Incidencia(
+      id: _siguienteId++,
+      titulo: datos.titulo,
+      descripcion: datos.descripcion,
+      estado: EstadoIncidencia.pendiente,
+      categoria: _buscarCategoria(datos.idCategoria),
+      reportadoPor: _personas.firstWhere(
+        (p) => p.id == idUsuario,
+        orElse: () => PersonaIncidencia(id: idUsuario, nombre: 'Usuario'),
+      ),
+      ubicacionTexto: datos.ubicacionTexto,
+      fechaCreacion: DateTime.now(),
+    );
+    _incidencias.add(nueva);
+    return nueva;
+  }
+
+  @override
+  Future<Incidencia> editarIncidencia(int id, DatosIncidencia datos) async {
+    await _esperar();
+    final posicion = _incidencias.indexWhere((i) => i.id == id);
+    if (posicion == -1) {
+      throw ApiException('La incidencia no existe', statusCode: 404);
+    }
+    final actual = _incidencias[posicion];
+
+    if (actual.reportadoPor.id != idUsuario) {
+      throw ApiException(
+        'Solo quien creó la incidencia puede editarla',
+        statusCode: 403,
+      );
+    }
+    if (actual.estado != EstadoIncidencia.pendiente) {
+      throw ApiException(
+        'Solo se pueden editar incidencias pendientes',
+        statusCode: 400,
+      );
+    }
+
+    // Se conservan el id, el estado, quién la reportó y la fecha
+    final editada = Incidencia(
+      id: actual.id,
+      titulo: datos.titulo,
+      descripcion: datos.descripcion,
+      estado: actual.estado,
+      categoria: _buscarCategoria(datos.idCategoria),
+      reportadoPor: actual.reportadoPor,
+      operador: actual.operador,
+      ubicacionTexto: datos.ubicacionTexto,
+      fechaCreacion: actual.fechaCreacion,
+    );
+    _incidencias[posicion] = editada;
+    return editada;
+  }
+
+  // Igual que en el backend la categoría debe existir y estar activa
+  Categoria _buscarCategoria(int id) => _categorias.firstWhere(
+    (c) => c.id == id && c.activa,
+    orElse: () => throw ApiException(
+      'Datos inválidos',
+      statusCode: 400,
+      errores: {'id_categoria': 'La categoría no existe o está inactiva'},
+    ),
+  );
 
   /// Simula la latencia de la red para ver el indicador de carga.
   Future<void> _esperar() async {

@@ -11,6 +11,7 @@ import 'package:mantenimiento_universitario/models/incidencia.dart';
 import 'package:mantenimiento_universitario/models/usuario.dart';
 import 'package:mantenimiento_universitario/pages/home_page.dart';
 import 'package:mantenimiento_universitario/theme/app_theme.dart';
+import 'package:mantenimiento_universitario/models/datos_incidencia.dart';
 
 const _ana = Usuario(
   id: 1,
@@ -40,6 +41,14 @@ class _RepositorioConError implements IncidenciasRepository {
 
   @override
   Future<List<Categoria>> obtenerCategorias() async =>
+      throw ApiException('No se pudo conectar con el servidor');
+
+  @override
+  Future<Incidencia> crearIncidencia(DatosIncidencia datos) async =>
+      throw ApiException('No se pudo conectar con el servidor');
+
+  @override
+  Future<Incidencia> editarIncidencia(int id, DatosIncidencia datos) async =>
       throw ApiException('No se pudo conectar con el servidor');
 }
 

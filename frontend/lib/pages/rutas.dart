@@ -1,9 +1,9 @@
-/// Nombres de rutas centralizados para la navegación.
+// Nombres de rutas centralizados para la navegación.
 class Rutas {
   static const inicio = '/';
   static const nuevaIncidencia = '/incidencias/nueva';
   static const misIncidencias = '/incidencias/mias';
   static const adminIncidencias = '/incidencias/admin';
-  static const detalleIncidencia =
-      '/incidencias/detalle'; // Recibe el id_incidencia
+  static const detalleIncidencia = '/incidencias/detalle';
+  static const editarIncidencia = '/incidencias/editar';
 }

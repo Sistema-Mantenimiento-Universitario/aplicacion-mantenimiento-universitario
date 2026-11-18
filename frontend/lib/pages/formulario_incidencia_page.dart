@@ -46,9 +46,6 @@ class _FormularioIncidenciaPageState extends State<FormularioIncidenciaPage> {
   bool _guardando = false;
   bool _saliendo = false;
 
-  // Después del primer intento de guardar los errores se actualizan al escribir
-  bool _validarAlEscribir = false;
-
   // Errores por campo que devolvió el backend (400)
   Map<String, String> _erroresServidor = const {};
 
@@ -110,7 +107,6 @@ class _FormularioIncidenciaPageState extends State<FormularioIncidenciaPage> {
   Future<void> _guardar() async {
     setState(() {
       _erroresServidor = const {};
-      _validarAlEscribir = true;
     });
     if (!_formulario.currentState!.validate()) return;
 
@@ -232,9 +228,7 @@ class _FormularioIncidenciaPageState extends State<FormularioIncidenciaPage> {
 
     return Form(
       key: _formulario,
-      autovalidateMode: _validarAlEscribir
-          ? AutovalidateMode.onUserInteraction
-          : AutovalidateMode.disabled,
+      autovalidateMode: AutovalidateMode.onUnfocus,
       child: ListView(
         padding: const EdgeInsets.all(16),
         children: [
@@ -243,6 +237,7 @@ class _FormularioIncidenciaPageState extends State<FormularioIncidenciaPage> {
             enabled: !_guardando,
             maxLength: LimitesIncidencia.tituloMax,
             textInputAction: TextInputAction.next,
+            autovalidateMode: AutovalidateMode.onUserInteractionIfError,
             decoration: const InputDecoration(
               labelText: 'Título',
               hintText: 'Ej. Lámpara fundida en el pasillo',
@@ -260,6 +255,7 @@ class _FormularioIncidenciaPageState extends State<FormularioIncidenciaPage> {
           const SizedBox(height: 8),
           DropdownButtonFormField<int>(
             initialValue: _idCategoria,
+            autovalidateMode: AutovalidateMode.onUserInteractionIfError,
             decoration: const InputDecoration(
               labelText: 'Categoría',
               prefixIcon: Icon(Icons.category_outlined),
@@ -289,6 +285,7 @@ class _FormularioIncidenciaPageState extends State<FormularioIncidenciaPage> {
             maxLines: 6,
             maxLength: LimitesIncidencia.descripcionMax,
             keyboardType: TextInputType.multiline,
+            autovalidateMode: AutovalidateMode.onUserInteractionIfError,
             decoration: const InputDecoration(
               labelText: 'Descripción',
               hintText: '¿Qué pasa y desde cuándo?',
@@ -309,6 +306,7 @@ class _FormularioIncidenciaPageState extends State<FormularioIncidenciaPage> {
             controller: _ubicacion,
             enabled: !_guardando,
             maxLength: LimitesIncidencia.ubicacionMax,
+            autovalidateMode: AutovalidateMode.onUserInteractionIfError,
             textInputAction: TextInputAction.done,
             decoration: const InputDecoration(
               labelText: 'Ubicación',

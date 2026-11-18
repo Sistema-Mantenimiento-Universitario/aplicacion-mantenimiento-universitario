@@ -26,7 +26,7 @@ const String kApiBaseUrl = String.fromEnvironment(
 
 // TODO: cambiar defaultValue a true cuando el backend tenga
 // POST /api/auth/login, GET /api/incidencias/resumen,
-// GET /api/incidencias y GET /api/categorias.
+// GET /api/incidencias y GET /api/categorias,
 // POST /api/incidencias y PUT /api/incidencias/:id.
 /// false: datos simulados. true backend real:
 ///   `flutter run -d chrome --dart-define=API_REAL=true`
@@ -88,27 +88,38 @@ class _MyAppState extends State<MyApp> {
               idUsuario: usuario.id,
               esOperador: usuario.esOperador,
             ));
+
+  // Las rutas internas escuchan la sesión. Al recargar la página en web,
+  // la sesión todavía se está leyendo y la pantalla se actualiza al terminar
+  Widget _conSesion(Widget Function(Usuario usuario) pantalla) {
+    return ListenableBuilder(
+      listenable: _sesion,
+      builder: (context, _) => switch (_sesion.estado) {
+        EstadoSesion.cargando => const _PantallaCarga(),
+        EstadoSesion.sinSesion => LoginPage(
+          onIniciarSesion: _sesion.iniciarSesion,
+        ),
+        EstadoSesion.conSesion => pantalla(_sesion.usuario!),
+      },
+    );
+  }
   // Listado con el repositorio y el token de la sesión actual
-  Widget _listado() {
-    final usuario = _sesion.usuario;
-    if (usuario == null) return const _PantallaCarga();
-    return ListadoIncidenciasPage(
+  Widget _listado() => _conSesion((usuario) => ListadoIncidenciasPage(
       usuario: usuario,
       repositorio: _incidenciasPara(usuario),
       onSesionExpirada: _sesion.cerrarSesion,
-    );
-  }
+    ),
+  );
 
   // Si la ruta recibe una Incidencia se abre en modo edición
   Widget _formulario(BuildContext context) {
-    final usuario = _sesion.usuario;
-    if (usuario == null) return const _PantallaCarga();
     final argumento = ModalRoute.of(context)?.settings.arguments;
-    return FormularioIncidenciaPage(
+    return _conSesion((usuario) => FormularioIncidenciaPage(
       usuario: usuario,
       repositorio: _incidenciasPara(usuario),
       incidencia: argumento is Incidencia ? argumento : null,
       onSesionExpirada: _sesion.cerrarSesion,
+      ),
     );
   }
 

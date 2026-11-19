@@ -12,6 +12,7 @@ import 'package:mantenimiento_universitario/models/usuario.dart';
 import 'package:mantenimiento_universitario/pages/listado_incidencias_page.dart';
 import 'package:mantenimiento_universitario/pages/rutas.dart';
 import 'package:mantenimiento_universitario/theme/app_theme.dart';
+import 'package:mantenimiento_universitario/models/datos_incidencia.dart';
 
 const _ana = Usuario(
   id: 1,
@@ -48,6 +49,14 @@ class _RepositorioConError implements IncidenciasRepository {
 
   @override
   Future<List<Categoria>> obtenerCategorias() async => throw error;
+
+  @override
+  Future<Incidencia> crearIncidencia(DatosIncidencia datos) async =>
+      throw error;
+
+  @override
+  Future<Incidencia> editarIncidencia(int id, DatosIncidencia datos) async =>
+      throw error;
 }
 
 Future<void> _abrirListado(
@@ -106,7 +115,7 @@ void main() {
     // Es de Beatriz, así que Ana no la ve.
     expect(find.text('Proyector sin imagen'), findsNothing);
     // Categoría y fecha en cada elemento.
-    expect(find.text('Electricidad · 12/11/2026 09:15'), findsOneWidget);
+    expect(find.text('Electricidad   12/11/2026 09:15'), findsOneWidget);
   });
 
   testWidgets('El operador ve todas y quién las reportó', (tester) async {

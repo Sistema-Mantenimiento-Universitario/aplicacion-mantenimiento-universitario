@@ -9,6 +9,7 @@ import 'data/sesion_controller.dart';
 import 'data/sesion_storage.dart';
 import 'models/incidencia.dart';
 import 'models/usuario.dart';
+import 'pages/detalle_incidencia_page.dart';
 import 'pages/formulario_incidencia_page.dart';
 import 'pages/home_page.dart';
 import 'pages/listado_incidencias_page.dart';
@@ -103,8 +104,10 @@ class _MyAppState extends State<MyApp> {
       },
     );
   }
+
   // Listado con el repositorio y el token de la sesión actual
-  Widget _listado() => _conSesion((usuario) => ListadoIncidenciasPage(
+  Widget _listado() => _conSesion(
+    (usuario) => ListadoIncidenciasPage(
       usuario: usuario,
       repositorio: _incidenciasPara(usuario),
       onSesionExpirada: _sesion.cerrarSesion,
@@ -114,11 +117,34 @@ class _MyAppState extends State<MyApp> {
   // Si la ruta recibe una Incidencia se abre en modo edición
   Widget _formulario(BuildContext context) {
     final argumento = ModalRoute.of(context)?.settings.arguments;
-    return _conSesion((usuario) => FormularioIncidenciaPage(
-      usuario: usuario,
-      repositorio: _incidenciasPara(usuario),
-      incidencia: argumento is Incidencia ? argumento : null,
-      onSesionExpirada: _sesion.cerrarSesion,
+    return _conSesion(
+      (usuario) => FormularioIncidenciaPage(
+        usuario: usuario,
+        repositorio: _incidenciasPara(usuario),
+        incidencia: argumento is Incidencia ? argumento : null,
+        onSesionExpirada: _sesion.cerrarSesion,
+      ),
+    );
+  }
+
+  // El listado abre el detalle con el id de la incidencia como argumento
+  Widget _detalle(BuildContext context) {
+    final argumento = ModalRoute.of(context)?.settings.arguments;
+    final id = argumento is int
+        ? argumento
+        : argumento is Incidencia
+        ? argumento.id
+        : null;
+    // Al recargar la página en web se pierde el argumento
+    if (id == null) {
+      return const PendientePage(titulo: 'Abre la incidencia desde el listado');
+    }
+    return _conSesion(
+      (usuario) => DetalleIncidenciaPage(
+        usuario: usuario,
+        repositorio: _incidenciasPara(usuario),
+        idIncidencia: id,
+        onSesionExpirada: _sesion.cerrarSesion,
       ),
     );
   }
@@ -160,8 +186,7 @@ class _MyAppState extends State<MyApp> {
           Rutas.nuevaIncidencia: _formulario,
           Rutas.editarIncidencia: _formulario,
           Rutas.misIncidencias: (_) => _listado(),
-          Rutas.detalleIncidencia: (_) =>
-              const PendientePage(titulo: 'Detalle de incidencia'),
+          Rutas.detalleIncidencia: _detalle,
           Rutas.adminIncidencias: (_) =>
               const PendientePage(titulo: 'Administración de incidencias'),
         },

@@ -130,7 +130,7 @@ void main() {
     expect(repositorio.envios, 0);
   });
 
-    testWidgets('Avisa que es obligatorio al salir de un campo vacío', (
+  testWidgets('Avisa que es obligatorio al salir de un campo vacío', (
     tester,
   ) async {
     await _abrirFormulario(tester, _RepositorioPrueba());
@@ -145,9 +145,7 @@ void main() {
     expect(find.text('Escribe la descripción'), findsNothing);
   });
 
-  testWidgets('Avisa el mínimo de caracteres antes de guardar', (
-    tester,
-  ) async {
+  testWidgets('Avisa el mínimo de caracteres antes de guardar', (tester) async {
     await _abrirFormulario(tester, _RepositorioPrueba());
 
     await tester.enterText(_campo('Título'), 'Foco');
@@ -162,7 +160,6 @@ void main() {
 
     expect(find.text('Debe tener al menos 5 caracteres'), findsNothing);
   });
-
 
   testWidgets('Valida el mínimo de caracteres', (tester) async {
     final repositorio = _RepositorioPrueba();

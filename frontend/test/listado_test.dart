@@ -7,6 +7,8 @@ import 'package:mantenimiento_universitario/data/incidencias_fake_repository.dar
 import 'package:mantenimiento_universitario/data/incidencias_repository.dart';
 import 'package:mantenimiento_universitario/models/categoria.dart';
 import 'package:mantenimiento_universitario/models/estado_incidencia.dart';
+import 'package:mantenimiento_universitario/models/evidencia.dart';
+import 'package:mantenimiento_universitario/models/historial.dart';
 import 'package:mantenimiento_universitario/models/incidencia.dart';
 import 'package:mantenimiento_universitario/models/usuario.dart';
 import 'package:mantenimiento_universitario/pages/listado_incidencias_page.dart';
@@ -57,6 +59,18 @@ class _RepositorioConError implements IncidenciasRepository {
   @override
   Future<Incidencia> editarIncidencia(int id, DatosIncidencia datos) async =>
       throw error;
+
+  @override
+  Future<Incidencia> obtenerIncidencia(int id) async => throw error;
+
+  @override
+  Future<List<EntradaHistorial>> obtenerHistorial(int id) async => throw error;
+
+  @override
+  Future<List<Evidencia>> obtenerEvidencias(int id) async => throw error;
+
+  @override
+  Future<void> cancelarIncidencia(int id) async => throw error;
 }
 
 Future<void> _abrirListado(

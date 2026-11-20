@@ -5,6 +5,8 @@ import 'package:http/http.dart' as http;
 
 import '../models/categoria.dart';
 import '../models/estado_incidencia.dart';
+import '../models/evidencia.dart';
+import '../models/historial.dart';
 import '../models/incidencia.dart';
 import '../models/datos_incidencia.dart';
 
@@ -51,6 +53,17 @@ abstract class IncidenciasRepository {
 
   // Edita una incidencia pendiente del usuario y la devuelve actualizada
   Future<Incidencia> editarIncidencia(int id, DatosIncidencia datos);
+  // Detalle completo de una incidencia (F9)
+  Future<Incidencia> obtenerIncidencia(int id);
+
+  // Historial de cambios, del más antiguo al más reciente (F9)
+  Future<List<EntradaHistorial>> obtenerHistorial(int id);
+
+  // Imágenes de la incidencia (F9)
+  Future<List<Evidencia>> obtenerEvidencias(int id);
+
+  // Cancela una incidencia pendiente (F9)
+  Future<void> cancelarIncidencia(int id);
 }
 
 class ApiIncidenciasRepository implements IncidenciasRepository {
@@ -162,6 +175,49 @@ class ApiIncidenciasRepository implements IncidenciasRepository {
       recurso: 'la incidencia',
     );
     return _convertirIncidencia(body);
+  }
+
+  // GET /api/incidencias/:id. Respuesta 200: el objeto incidencia completo
+  @override
+  Future<Incidencia> obtenerIncidencia(int id) async {
+    final body = await _getJson(
+      Uri.parse('$baseUrl/incidencias/$id'),
+      recurso: 'la incidencia',
+    );
+    return _convertirIncidencia(body);
+  }
+
+  // GET /api/incidencias/:id/historial
+  @override
+  Future<List<EntradaHistorial>> obtenerHistorial(int id) async {
+    final body = await _getJson(
+      Uri.parse('$baseUrl/incidencias/$id/historial'),
+      recurso: 'el historial',
+    );
+    return _convertirLista(body, EntradaHistorial.fromJson);
+  }
+
+  // GET /api/incidencias/:id/evidencias. Las URL vienen sin el host
+  @override
+  Future<List<Evidencia>> obtenerEvidencias(int id) async {
+    final body = await _getJson(
+      Uri.parse('$baseUrl/incidencias/$id/evidencias'),
+      recurso: 'las evidencias',
+    );
+    final servidor = Uri.parse(baseUrl).origin;
+    return _convertirLista(
+      body,
+      (json) => Evidencia.fromJson(json, servidor: servidor),
+    );
+  }
+
+  // DELETE /api/incidencias/:id. Respuesta 200: { ok, mensaje, estado }
+  @override
+  Future<void> cancelarIncidencia(int id) async {
+    await _procesar(
+      _client.delete(Uri.parse('$baseUrl/incidencias/$id'), headers: _headers),
+      recurso: 'la incidencia',
+    );
   }
 
   // Hace un GET y devuelve el JSON, o lanza una excepción

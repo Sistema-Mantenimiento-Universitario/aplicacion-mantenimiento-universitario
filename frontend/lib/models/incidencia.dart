@@ -26,6 +26,11 @@ class Incidencia {
     this.operador,
     this.descripcion,
     this.ubicacionTexto,
+    this.latitud,
+    this.longitud,
+    this.solucionDescripcion,
+    this.fechaActualizacion,
+    this.fechaFinalizacion,
   });
 
   final int id;
@@ -42,6 +47,33 @@ class Incidencia {
   // En hora local (la API la manda en UTC).
   final DateTime fechaCreacion;
 
+  // Solo vienen en el detalle (GET /api/incidencias/:id)
+  final double? latitud;
+  final double? longitud;
+  final String? solucionDescripcion;
+  final DateTime? fechaActualizacion;
+  final DateTime? fechaFinalizacion;
+
+  bool get tieneCoordenadas => latitud != null && longitud != null;
+
+  // Copia con otro estado (la usa el repositorio simulado)
+  Incidencia conEstado(EstadoIncidencia nuevoEstado) => Incidencia(
+    id: id,
+    titulo: titulo,
+    estado: nuevoEstado,
+    categoria: categoria,
+    reportadoPor: reportadoPor,
+    fechaCreacion: fechaCreacion,
+    operador: operador,
+    descripcion: descripcion,
+    ubicacionTexto: ubicacionTexto,
+    latitud: latitud,
+    longitud: longitud,
+    solucionDescripcion: solucionDescripcion,
+    fechaActualizacion: DateTime.now(),
+    fechaFinalizacion: fechaFinalizacion,
+  );
+
   factory Incidencia.fromJson(Map<String, dynamic> json) => Incidencia(
     id: (json['id_incidencia'] as num).toInt(),
     titulo: (json['titulo'] ?? '') as String,
@@ -56,5 +88,13 @@ class Incidencia {
     descripcion: json['descripcion'] as String?,
     ubicacionTexto: json['ubicacion_texto'] as String?,
     fechaCreacion: DateTime.parse(json['fecha_creacion'] as String).toLocal(),
+    latitud: (json['latitud'] as num?)?.toDouble(),
+    longitud: (json['longitud'] as num?)?.toDouble(),
+    solucionDescripcion: json['solucion_descripcion'] as String?,
+    fechaActualizacion: _fecha(json['fecha_actualizacion']),
+    fechaFinalizacion: _fecha(json['fecha_finalizacion']),
   );
+
+  static DateTime? _fecha(Object? valor) =>
+      valor is String ? DateTime.parse(valor).toLocal() : null;
 }

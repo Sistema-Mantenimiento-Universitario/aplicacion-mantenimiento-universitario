@@ -5,6 +5,8 @@ class DatosIncidencia {
     required this.descripcion,
     required this.idCategoria,
     this.ubicacionTexto,
+    this.latitud,
+    this.longitud,
   });
 
   final String titulo;
@@ -12,12 +14,23 @@ class DatosIncidencia {
   final int idCategoria;
   final String? ubicacionTexto;
 
+  // Coordenadas del GPS o escritas a mano
+  final double? latitud;
+  final double? longitud;
+
+  bool get tieneCoordenadas => latitud != null && longitud != null;
+
+  // Al menos una forma de ubicación ya sea en texto o coordenadas
+  bool get tieneUbicacion =>
+      (ubicacionTexto ?? '').isNotEmpty || tieneCoordenadas;
+
   // Cuerpo de POST y PUT /api/incidencias
   Map<String, dynamic> toJson() => {
     'titulo': titulo,
     'descripcion': descripcion,
     'id_categoria': idCategoria,
     if (ubicacionTexto != null) 'ubicacion_texto': ubicacionTexto,
+    if (tieneCoordenadas) ...{'latitud': latitud, 'longitud': longitud},
   };
 }
 
@@ -30,5 +43,7 @@ class LimitesIncidencia {
   static const ubicacionMin = 3;
   static const ubicacionMax = 200;
   static const fotosMax = 5;
-  static const fotoMaxBytes = 5 * 1024 * 1024;  
+  static const fotoMaxBytes = 5 * 1024 * 1024;
+  static const latitudMax = 90.0;
+  static const longitudMax = 180.0;
 }

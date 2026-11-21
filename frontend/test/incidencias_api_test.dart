@@ -65,6 +65,32 @@ void main() {
     expect(incidencia.id, 12);
   });
 
+  test('Con coordenadas, las manda junto con la ubicación en texto', () async {
+    late http.Request enviada;
+    final repositorio = _repositorio(
+      MockClient((peticion) async {
+        enviada = peticion;
+        return _json(_respuesta, 201);
+      }),
+    );
+
+    await repositorio.crearIncidencia(
+      const DatosIncidencia(
+        titulo: 'Lámpara fundida en el pasillo',
+        descripcion: 'La lámpara del pasillo no enciende desde el lunes.',
+        idCategoria: 2,
+        latitud: 21.913600,
+        longitud: -102.315800,
+      ),
+    );
+
+    final cuerpo = jsonDecode(enviada.body) as Map<String, dynamic>;
+    expect(cuerpo['latitud'], 21.9136);
+    expect(cuerpo['longitud'], -102.3158);
+    // Sin texto no se manda la clave
+    expect(cuerpo.containsKey('ubicacion_texto'), isFalse);
+  });
+
   test('Editar: manda PUT a /incidencias/:id', () async {
     late http.Request enviada;
     final repositorio = _repositorio(

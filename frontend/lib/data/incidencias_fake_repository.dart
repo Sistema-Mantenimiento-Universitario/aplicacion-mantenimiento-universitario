@@ -172,6 +172,7 @@ class FakeIncidenciasRepository implements IncidenciasRepository {
   @override
   Future<Incidencia> crearIncidencia(DatosIncidencia datos) async {
     await _esperar();
+    _validarUbicacion(datos);
     final nueva = Incidencia(
       id: _siguienteId++,
       titulo: datos.titulo,
@@ -183,6 +184,8 @@ class FakeIncidenciasRepository implements IncidenciasRepository {
         orElse: () => PersonaIncidencia(id: idUsuario, nombre: 'Usuario'),
       ),
       ubicacionTexto: datos.ubicacionTexto,
+      latitud: datos.latitud,
+      longitud: datos.longitud,
       fechaCreacion: DateTime.now(),
     );
     _incidencias.add(nueva);
@@ -198,6 +201,7 @@ class FakeIncidenciasRepository implements IncidenciasRepository {
       throw ApiException('La incidencia no existe', statusCode: 404);
     }
     final actual = _incidencias[posicion];
+    _validarUbicacion(datos);
 
     if (actual.reportadoPor.id != idUsuario) {
       throw ApiException(
@@ -222,8 +226,8 @@ class FakeIncidenciasRepository implements IncidenciasRepository {
       reportadoPor: actual.reportadoPor,
       operador: actual.operador,
       ubicacionTexto: datos.ubicacionTexto,
-      latitud: actual.latitud,
-      longitud: actual.longitud,
+      latitud: datos.latitud,
+      longitud: datos.longitud,
       solucionDescripcion: actual.solucionDescripcion,
       fechaCreacion: actual.fechaCreacion,
       fechaActualizacion: DateTime.now(),
@@ -234,6 +238,18 @@ class FakeIncidenciasRepository implements IncidenciasRepository {
     );
     _incidencias[posicion] = editada;
     return editada;
+  }
+
+  void _validarUbicacion(DatosIncidencia datos) {
+    if (!datos.tieneUbicacion) {
+      throw ApiException(
+        'Datos inválidos',
+        statusCode: 400,
+        errores: {
+          'ubicacion_texto': 'Indica la ubicación: texto, o latitud y longitud',
+        },
+      );
+    }
   }
 
   @override

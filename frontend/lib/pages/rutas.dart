@@ -12,10 +12,10 @@ class Rutas {
   static String detalle(int id) => '$detalleIncidencia?id=$id';
   static String editar(int id) => '$editarIncidencia?id=$id';
 
-  // Ruta sin parámetros: '/incidencias/detalle?id=5' → '/incidencias/detalle'
+  // Ruta sin parámetros: '/incidencias/detalle?id=5' -> '/incidencias/detalle'
   static String base(String ruta) => Uri.parse(ruta).path;
 
-  // Id de la URL: '/incidencias/detalle?id=5' → 5 (null si no viene)
+  // Id de la URL: '/incidencias/detalle?id=5' -> 5 (null si no viene)
   static int? idDe(String ruta) =>
       int.tryParse(Uri.parse(ruta).queryParameters['id'] ?? '');
 }

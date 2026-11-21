@@ -1,4 +1,4 @@
-// Pruebas de los endpoints de la F9 con un servidor simulado
+// Pruebas de los endpoints de la con un servidor simulado
 import 'dart:convert';
 
 import 'package:flutter_test/flutter_test.dart';

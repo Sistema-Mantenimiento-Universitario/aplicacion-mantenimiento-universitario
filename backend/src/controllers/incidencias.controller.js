@@ -1,5 +1,6 @@
 const incidenciaModel = require('../models/incidencia.model');
 const categoriaModel = require('../models/categoria.model');
+const historialModel = require('../models/historial.model');
 
 const ESTADOS = ['pendiente', 'asignada', 'en_proceso', 'finalizada', 'cancelada'];
 
@@ -302,4 +303,25 @@ const cancelar = async (req, res) => {
   }
 };
 
-module.exports = { crear, listar, resumen, detalle, editar, cancelar };
+// GET /api/incidencias/:id/historial
+const historial = async (req, res) => {
+  const id = obtenerIdValido(req, res);
+  if (id === null) return;
+
+  try {
+    const incidencia = await incidenciaModel.buscarPorId(id);
+    if (!incidencia) return noEncontrada(res);
+
+    // El usuario solo ve el historial de sus propias incidencias
+    if (req.usuario.rol === 'usuario' && !esCreador(incidencia, req)) {
+      return sinPermiso(res);
+    }
+
+    const cambios = await historialModel.listarPorIncidencia(id);
+    return res.json(cambios);
+  } catch (error) {
+    return errorInterno(res, error);
+  }
+};
+
+module.exports = { crear, listar, resumen, detalle, editar, cancelar, historial };

@@ -49,7 +49,7 @@ class ServicioImagenes {
   Future<FotoSeleccionada?> _elegir(ImageSource origen) async {
     final XFile? archivo;
     try {
-      // Se reduce la foto para que pese menos 
+      // Se reduce la foto para que pese menos
       archivo = await _selector.pickImage(
         source: origen,
         imageQuality: 70,

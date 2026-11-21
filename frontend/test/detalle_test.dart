@@ -51,10 +51,18 @@ Future<void> _abrirDetalle(
         ),
         idIncidencia: id,
       ),
-      routes: {
-        Rutas.editarIncidencia: (_) =>
-            const Scaffold(body: Text('Formulario de edición')),
-      },
+      // La edición se abre con el id en la URL: /incidencias/editar?id=1
+      onGenerateRoute: (settings) =>
+          Rutas.base(settings.name!) == Rutas.editarIncidencia
+          ? MaterialPageRoute<Object?>(
+              settings: settings,
+              builder: (_) => Scaffold(
+                body: Text(
+                  'Formulario de edición ${Rutas.idDe(settings.name!)}',
+                ),
+              ),
+            )
+          : null,
     ),
   );
   // Con imágenes de red no se usa pumpAndSettle: el indicador de
@@ -125,8 +133,7 @@ void main() {
 
     await tester.tap(find.text('Editar'));
     await tester.pumpAndSettle();
-
-    expect(find.text('Formulario de edición'), findsOneWidget);
+    expect(find.text('Formulario de edición 1'), findsOneWidget);
   });
 
   testWidgets('Cancelar pide confirmación y cambia el estado', (tester) async {

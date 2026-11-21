@@ -146,7 +146,7 @@ class _DetalleIncidenciaPageState extends State<DetalleIncidenciaPage> {
   Future<void> _editar() async {
     final guardada = await Navigator.pushNamed(
       context,
-      Rutas.editarIncidencia,
+      Rutas.editar(widget.idIncidencia),
       arguments: _incidencia,
     );
     if (guardada != null && mounted) _cargar();

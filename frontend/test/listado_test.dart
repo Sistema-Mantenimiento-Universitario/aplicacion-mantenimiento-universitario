@@ -99,11 +99,15 @@ Future<void> _abrirListado(
             ),
         onSesionExpirada: onSesionExpirada,
       ),
-      routes: {
-        Rutas.detalleIncidencia: (context) => Scaffold(
-          body: Text('Detalle ${ModalRoute.of(context)!.settings.arguments}'),
-        ),
-      },
+      // El detalle se abre con el id en la URL: /incidencias/detalle?id=1
+      onGenerateRoute: (settings) =>
+          Rutas.base(settings.name!) == Rutas.detalleIncidencia
+          ? MaterialPageRoute<void>(
+              settings: settings,
+              builder: (_) =>
+                  Scaffold(body: Text('Detalle ${Rutas.idDe(settings.name!)}')),
+            )
+          : null,
     ),
   );
   await tester.pumpAndSettle();

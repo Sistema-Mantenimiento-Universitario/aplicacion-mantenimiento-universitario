@@ -29,4 +29,6 @@ class LimitesIncidencia {
   static const descripcionMax = 2000;
   static const ubicacionMin = 3;
   static const ubicacionMax = 200;
+  static const fotosMax = 5;
+  static const fotoMaxBytes = 5 * 1024 * 1024;  
 }

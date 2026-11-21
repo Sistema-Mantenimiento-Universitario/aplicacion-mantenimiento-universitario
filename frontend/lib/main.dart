@@ -9,6 +9,8 @@ import 'data/sesion_controller.dart';
 import 'data/sesion_storage.dart';
 import 'models/incidencia.dart';
 import 'models/usuario.dart';
+import 'pages/editar_incidencia_page.dart';
+import 'pages/detalle_incidencia_page.dart';
 import 'pages/formulario_incidencia_page.dart';
 import 'pages/home_page.dart';
 import 'pages/listado_incidencias_page.dart';
@@ -103,8 +105,10 @@ class _MyAppState extends State<MyApp> {
       },
     );
   }
+
   // Listado con el repositorio y el token de la sesión actual
-  Widget _listado() => _conSesion((usuario) => ListadoIncidenciasPage(
+  Widget _listado() => _conSesion(
+    (usuario) => ListadoIncidenciasPage(
       usuario: usuario,
       repositorio: _incidenciasPara(usuario),
       onSesionExpirada: _sesion.cerrarSesion,
@@ -114,11 +118,57 @@ class _MyAppState extends State<MyApp> {
   // Si la ruta recibe una Incidencia se abre en modo edición
   Widget _formulario(BuildContext context) {
     final argumento = ModalRoute.of(context)?.settings.arguments;
-    return _conSesion((usuario) => FormularioIncidenciaPage(
-      usuario: usuario,
-      repositorio: _incidenciasPara(usuario),
-      incidencia: argumento is Incidencia ? argumento : null,
-      onSesionExpirada: _sesion.cerrarSesion,
+    return _conSesion(
+      (usuario) => FormularioIncidenciaPage(
+        usuario: usuario,
+        repositorio: _incidenciasPara(usuario),
+        incidencia: argumento is Incidencia ? argumento : null,
+        onSesionExpirada: _sesion.cerrarSesion,
+      ),
+    );
+  }
+
+  // Detalle y edición llevan el id en la URL (?id=5), así sobreviven
+  // a recargar la página en web. Rutas desconocidas → null
+  Route<Object?>? _rutaConId(RouteSettings settings) {
+    final ruta = settings.name ?? '';
+    final id = Rutas.idDe(ruta);
+    final Widget? pantalla = switch (Rutas.base(ruta)) {
+      Rutas.detalleIncidencia => _detalle(id),
+      Rutas.editarIncidencia => _editar(id, settings.arguments),
+      _ => null,
+    };
+    if (pantalla == null) return null;
+    return MaterialPageRoute<Object?>(
+      settings: settings,
+      builder: (_) => pantalla,
+    );
+  }
+
+  Widget _detalle(int? id) {
+    if (id == null) return const IncidenciaNoIndicadaPage();
+    return _conSesion(
+      (usuario) => DetalleIncidenciaPage(
+        usuario: usuario,
+        repositorio: _incidenciasPara(usuario),
+        idIncidencia: id,
+        onSesionExpirada: _sesion.cerrarSesion,
+      ),
+    );
+  }
+
+  // Desde el detalle llega la incidencia; al recargar solo el id
+  Widget _editar(int? id, Object? argumento) {
+    final incidencia = argumento is Incidencia ? argumento : null;
+    final idIncidencia = id ?? incidencia?.id;
+    if (idIncidencia == null) return const IncidenciaNoIndicadaPage();
+    return _conSesion(
+      (usuario) => EditarIncidenciaPage(
+        usuario: usuario,
+        repositorio: _incidenciasPara(usuario),
+        idIncidencia: idIncidencia,
+        incidencia: incidencia,
+        onSesionExpirada: _sesion.cerrarSesion,
       ),
     );
   }
@@ -158,13 +208,11 @@ class _MyAppState extends State<MyApp> {
         routes: {
           // Sustituye estas pantallas provisionales por las reales:
           Rutas.nuevaIncidencia: _formulario,
-          Rutas.editarIncidencia: _formulario,
           Rutas.misIncidencias: (_) => _listado(),
-          Rutas.detalleIncidencia: (_) =>
-              const PendientePage(titulo: 'Detalle de incidencia'),
           Rutas.adminIncidencias: (_) =>
               const PendientePage(titulo: 'Administración de incidencias'),
         },
+        onGenerateRoute: _rutaConId,
       ),
     );
   }

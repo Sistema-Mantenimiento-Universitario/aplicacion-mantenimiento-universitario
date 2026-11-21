@@ -1,5 +1,6 @@
 // Pruebas del repositorio real con un servidor simulado
 import 'dart:convert';
+import 'dart:typed_data';
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:http/http.dart' as http;
@@ -7,6 +8,7 @@ import 'package:http/testing.dart';
 
 import 'package:mantenimiento_universitario/data/incidencias_repository.dart';
 import 'package:mantenimiento_universitario/models/datos_incidencia.dart';
+import 'package:mantenimiento_universitario/services/servicio_imagenes.dart';
 
 const _datos = DatosIncidencia(
   titulo: 'Lámpara fundida en el pasillo',
@@ -104,6 +106,44 @@ void main() {
 
     expect(enviada.method, 'PUT');
     expect(enviada.url.path, '/api/incidencias/12');
+  });
+
+  test('Fotos: manda multipart con el campo imagenes y su tipo', () async {
+    late http.Request enviada;
+    final repositorio = _repositorio(
+      MockClient((peticion) async {
+        enviada = peticion;
+        return _json([
+          {
+            'id_evidencia': 7,
+            'tipo': 'reporte',
+            'url': '/uploads/evidencias/abc.jpg',
+            'nombre_original': 'lampara.jpg',
+            'mime_type': 'image/jpeg',
+            'fecha_subida': '2026-11-11T15:31:00.000Z',
+          },
+        ], 201);
+      }),
+    );
+
+    final evidencias = await repositorio.subirEvidencias(12, [
+      FotoSeleccionada(
+        nombre: 'lampara.jpg',
+        bytes: Uint8List.fromList([1, 2, 3]),
+        tipoMime: 'image/jpeg',
+      ),
+    ]);
+
+    expect(enviada.method, 'POST');
+    expect(enviada.url.path, '/api/incidencias/12/evidencias');
+    expect(enviada.headers['Authorization'], 'Bearer abc');
+    expect(enviada.headers['content-type'], startsWith('multipart/form-data'));
+    // Cada foto va en el campo "imagenes" con su nombre y su tipo
+    final cuerpo = latin1.decode(enviada.bodyBytes);
+    expect(cuerpo, contains('name="imagenes"; filename="lampara.jpg"'));
+    expect(cuerpo, contains('content-type: image/jpeg'));
+    // La URL de la evidencia se completa con el host del servidor
+    expect(evidencias.single.url, 'http://servidor/uploads/evidencias/abc.jpg');
   });
 
   test('Un 400 trae el mensaje y los errores por campo', () async {

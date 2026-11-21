@@ -5,6 +5,7 @@ import '../models/historial.dart';
 import '../models/incidencia.dart';
 import 'incidencias_repository.dart';
 import '../models/datos_incidencia.dart';
+import '../services/servicio_imagenes.dart';
 
 /// Datos simulados con los estados y roles del contrato (docs/api.md).
 /// Se usa mientras el backend no tenga GET /api/incidencias/resumen.
@@ -330,6 +331,41 @@ class FakeIncidenciasRepository implements IncidenciasRepository {
   );
 
   // ---------- Historial y evidencias simulados ----------
+
+  static int _siguienteIdEvidencia = 100;
+
+  @override
+  Future<List<Evidencia>> subirEvidencias(
+    int id,
+    List<FotoSeleccionada> fotos,
+  ) async {
+    await _esperar();
+    // Mismos permisos que el backend
+    _buscarVisible(id);
+    if (fotos.isEmpty || fotos.length > LimitesIncidencia.fotosMax) {
+      throw ApiException(
+        'Envía de 1 a ${LimitesIncidencia.fotosMax} imágenes',
+        statusCode: 400,
+      );
+    }
+
+    final nuevas = [
+      for (final foto in fotos)
+        Evidencia(
+          id: _siguienteIdEvidencia++,
+          tipo: esOperador ? 'atencion' : 'reporte',
+          // Sin servidor, la imagen se guarda dentro de la URL (data:)
+          url: Uri.dataFromBytes(
+            foto.bytes,
+            mimeType: foto.tipoMime,
+          ).toString(),
+          nombreOriginal: foto.nombre,
+          fechaSubida: DateTime.now(),
+        ),
+    ];
+    _evidencias.putIfAbsent(id, () => []).addAll(nuevas);
+    return nuevas;
+  }
 
   static int _siguienteIdHistorial = 1;
   static final Map<int, List<EntradaHistorial>> _historiales = {};

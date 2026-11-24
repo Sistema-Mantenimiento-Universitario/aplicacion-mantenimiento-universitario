@@ -7,6 +7,7 @@ const authRoutes = require('./routes/auth.routes');
 const { probarConexion } = require('./config/db');
 const incidenciasRoutes = require('./routes/incidencias.routes');
 const categoriasRoutes = require('./routes/categorias.routes');
+const evidenciasRoutes = require('./routes/evidencias.routes');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -16,6 +17,8 @@ app.use(express.json());
 
 app.use('/api/prueba', pruebaRoutes);
 app.use('/api/auth', authRoutes);
+// Va antes que /api/incidencias para que esas rutas no la intercepten
+app.use('/api/incidencias/:id/evidencias', evidenciasRoutes);
 app.use('/api/incidencias', incidenciasRoutes);
 app.use('/api/categorias', categoriasRoutes);
 

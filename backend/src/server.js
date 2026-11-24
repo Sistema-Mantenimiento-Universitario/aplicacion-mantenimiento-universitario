@@ -1,5 +1,6 @@
 require('dotenv').config({ quiet: true });
 
+const path = require('path');
 const express = require('express');
 const cors = require('cors');
 const pruebaRoutes = require('./routes/prueba.routes');
@@ -14,6 +15,9 @@ const PORT = process.env.PORT || 3000;
 
 app.use(cors());
 app.use(express.json());
+
+// Imágenes de evidencias, públicas (sin token) para que la app las muestre con Image.network
+app.use('/uploads', express.static(path.join(__dirname, '..', 'uploads')));
 
 app.use('/api/prueba', pruebaRoutes);
 app.use('/api/auth', authRoutes);

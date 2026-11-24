@@ -69,6 +69,14 @@ abstract class IncidenciasRepository {
 
   // Sube fotos de la incidencia y devuelve las evidencias guardadas
   Future<List<Evidencia>> subirEvidencias(int id, List<FotoSeleccionada> fotos);
+  // Solo operador: avanza o cancela una incidencia y la devuelve
+  // actualizada `solucion` es obligatoria al pasar a finalizada
+  Future<Incidencia> cambiarEstado(
+    int id,
+    EstadoIncidencia nuevoEstado, {
+    String? solucion,
+    String? comentario,
+  });
 }
 
 class ApiIncidenciasRepository implements IncidenciasRepository {
@@ -260,6 +268,31 @@ class ApiIncidenciasRepository implements IncidenciasRepository {
       body,
       (json) => Evidencia.fromJson(json, servidor: servidor),
     );
+  }
+
+  // PATCH /api/incidencias/:id/estado. Respuesta 200: la incidencia actualizada
+  @override
+  Future<Incidencia> cambiarEstado(
+    int id,
+    EstadoIncidencia nuevoEstado, {
+    String? solucion,
+    String? comentario,
+  }) async {
+    final body = await _procesar(
+      _client.patch(
+        Uri.parse('$baseUrl/incidencias/$id/estado'),
+        headers: _headersJson,
+        body: jsonEncode({
+          'estado': nuevoEstado.valorIncidencia,
+          if (solucion != null && solucion.trim().isNotEmpty)
+            'solucion_descripcion': solucion.trim(),
+          if (comentario != null && comentario.trim().isNotEmpty)
+            'comentario': comentario.trim(),
+        }),
+      ),
+      recurso: 'la incidencia',
+    );
+    return _convertirIncidencia(body);
   }
 
   // Hace un GET y devuelve el JSON, o lanza una excepción

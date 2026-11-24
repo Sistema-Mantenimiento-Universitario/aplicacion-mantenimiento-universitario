@@ -5,6 +5,7 @@ import '../models/historial.dart';
 import '../models/incidencia.dart';
 import 'incidencias_repository.dart';
 import '../models/datos_incidencia.dart';
+import '../services/servicio_imagenes.dart';
 
 /// Datos simulados con los estados y roles del contrato (docs/api.md).
 /// Se usa mientras el backend no tenga GET /api/incidencias/resumen.
@@ -172,6 +173,7 @@ class FakeIncidenciasRepository implements IncidenciasRepository {
   @override
   Future<Incidencia> crearIncidencia(DatosIncidencia datos) async {
     await _esperar();
+    _validarUbicacion(datos);
     final nueva = Incidencia(
       id: _siguienteId++,
       titulo: datos.titulo,
@@ -183,6 +185,8 @@ class FakeIncidenciasRepository implements IncidenciasRepository {
         orElse: () => PersonaIncidencia(id: idUsuario, nombre: 'Usuario'),
       ),
       ubicacionTexto: datos.ubicacionTexto,
+      latitud: datos.latitud,
+      longitud: datos.longitud,
       fechaCreacion: DateTime.now(),
     );
     _incidencias.add(nueva);
@@ -198,6 +202,7 @@ class FakeIncidenciasRepository implements IncidenciasRepository {
       throw ApiException('La incidencia no existe', statusCode: 404);
     }
     final actual = _incidencias[posicion];
+    _validarUbicacion(datos);
 
     if (actual.reportadoPor.id != idUsuario) {
       throw ApiException(
@@ -222,8 +227,8 @@ class FakeIncidenciasRepository implements IncidenciasRepository {
       reportadoPor: actual.reportadoPor,
       operador: actual.operador,
       ubicacionTexto: datos.ubicacionTexto,
-      latitud: actual.latitud,
-      longitud: actual.longitud,
+      latitud: datos.latitud,
+      longitud: datos.longitud,
       solucionDescripcion: actual.solucionDescripcion,
       fechaCreacion: actual.fechaCreacion,
       fechaActualizacion: DateTime.now(),
@@ -234,6 +239,18 @@ class FakeIncidenciasRepository implements IncidenciasRepository {
     );
     _incidencias[posicion] = editada;
     return editada;
+  }
+
+  void _validarUbicacion(DatosIncidencia datos) {
+    if (!datos.tieneUbicacion) {
+      throw ApiException(
+        'Datos inválidos',
+        statusCode: 400,
+        errores: {
+          'ubicacion_texto': 'Indica la ubicación: texto, o latitud y longitud',
+        },
+      );
+    }
   }
 
   @override
@@ -314,6 +331,41 @@ class FakeIncidenciasRepository implements IncidenciasRepository {
   );
 
   // ---------- Historial y evidencias simulados ----------
+
+  static int _siguienteIdEvidencia = 100;
+
+  @override
+  Future<List<Evidencia>> subirEvidencias(
+    int id,
+    List<FotoSeleccionada> fotos,
+  ) async {
+    await _esperar();
+    // Mismos permisos que el backend
+    _buscarVisible(id);
+    if (fotos.isEmpty || fotos.length > LimitesIncidencia.fotosMax) {
+      throw ApiException(
+        'Envía de 1 a ${LimitesIncidencia.fotosMax} imágenes',
+        statusCode: 400,
+      );
+    }
+
+    final nuevas = [
+      for (final foto in fotos)
+        Evidencia(
+          id: _siguienteIdEvidencia++,
+          tipo: esOperador ? 'atencion' : 'reporte',
+          // Sin servidor, la imagen se guarda dentro de la URL (data:)
+          url: Uri.dataFromBytes(
+            foto.bytes,
+            mimeType: foto.tipoMime,
+          ).toString(),
+          nombreOriginal: foto.nombre,
+          fechaSubida: DateTime.now(),
+        ),
+    ];
+    _evidencias.putIfAbsent(id, () => []).addAll(nuevas);
+    return nuevas;
+  }
 
   static int _siguienteIdHistorial = 1;
   static final Map<int, List<EntradaHistorial>> _historiales = {};

@@ -624,17 +624,34 @@ class _Imagen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final color = Theme.of(context).colorScheme.onSurface
-        .withValues(alpha: 0.5);
+    // Las fotos subidas con el repositorio simulado traen la imagen
+    // dentro de la URL (data:); esas se muestran desde la memoria
+    if (url.startsWith('data:')) {
+      return Image.memory(
+        UriData.parse(url).contentAsBytes(),
+        fit: fit,
+        errorBuilder: _imagenRota,
+      );
+    }
     return Image.network(
       url,
       fit: fit,
       loadingBuilder: (context, child, progreso) => progreso == null
           ? child
           : const Center(child: CircularProgressIndicator(strokeWidth: 2)),
-      errorBuilder: (context, error, stack) => ColoredBox(
-        color: Theme.of(context).colorScheme.surfaceContainerHighest,
-        child: Center(child: Icon(Icons.broken_image_outlined, color: color)),
+      errorBuilder: _imagenRota,
+    );
+  }
+
+  Widget _imagenRota(BuildContext context, Object error, StackTrace? stack) {
+    final theme = Theme.of(context);
+    return ColoredBox(
+      color: theme.colorScheme.surfaceContainerHighest,
+      child: Center(
+        child: Icon(
+          Icons.broken_image_outlined,
+          color: theme.colorScheme.onSurface.withValues(alpha: 0.5),
+        ),
       ),
     );
   }

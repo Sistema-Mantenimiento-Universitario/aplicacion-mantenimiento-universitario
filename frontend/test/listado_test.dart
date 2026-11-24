@@ -15,6 +15,7 @@ import 'package:mantenimiento_universitario/pages/listado_incidencias_page.dart'
 import 'package:mantenimiento_universitario/pages/rutas.dart';
 import 'package:mantenimiento_universitario/theme/app_theme.dart';
 import 'package:mantenimiento_universitario/models/datos_incidencia.dart';
+import 'package:mantenimiento_universitario/services/servicio_imagenes.dart';
 
 const _ana = Usuario(
   id: 1,
@@ -71,6 +72,12 @@ class _RepositorioConError implements IncidenciasRepository {
 
   @override
   Future<void> cancelarIncidencia(int id) async => throw error;
+
+  @override
+  Future<List<Evidencia>> subirEvidencias(
+    int id,
+    List<FotoSeleccionada> fotos,
+  ) async => throw error;
 }
 
 Future<void> _abrirListado(

@@ -10,6 +10,7 @@ import 'package:mantenimiento_universitario/models/estado_incidencia.dart';
 import 'package:mantenimiento_universitario/models/incidencia.dart';
 import 'package:mantenimiento_universitario/models/usuario.dart';
 import 'package:mantenimiento_universitario/pages/home_page.dart';
+import 'package:mantenimiento_universitario/services/servicio_imagenes.dart';
 import 'package:mantenimiento_universitario/theme/app_theme.dart';
 import 'package:mantenimiento_universitario/models/datos_incidencia.dart';
 import 'package:mantenimiento_universitario/models/evidencia.dart';
@@ -67,6 +68,12 @@ class _RepositorioConError implements IncidenciasRepository {
   @override
   Future<void> cancelarIncidencia(int id) async =>
       throw ApiException('No se pudo conectar con el servidor');
+
+  @override
+  Future<List<Evidencia>> subirEvidencias(
+    int id,
+    List<FotoSeleccionada> fotos,
+  ) async => throw ApiException('No se pudo conectar con el servidor');
 }
 
 Future<void> _abrirHome(

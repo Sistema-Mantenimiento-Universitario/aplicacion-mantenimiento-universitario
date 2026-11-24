@@ -2,11 +2,15 @@ import 'dart:async';
 import 'dart:convert';
 
 import 'package:http/http.dart' as http;
+import 'package:http_parser/http_parser.dart';
 
 import '../models/categoria.dart';
 import '../models/estado_incidencia.dart';
+import '../models/evidencia.dart';
+import '../models/historial.dart';
 import '../models/incidencia.dart';
 import '../models/datos_incidencia.dart';
+import '../services/servicio_imagenes.dart';
 
 /// Error de la API con el mensaje listo para mostrarse al usuario.
 class ApiException implements Exception {
@@ -51,6 +55,20 @@ abstract class IncidenciasRepository {
 
   // Edita una incidencia pendiente del usuario y la devuelve actualizada
   Future<Incidencia> editarIncidencia(int id, DatosIncidencia datos);
+  // Detalle completo de una incidencia (F9)
+  Future<Incidencia> obtenerIncidencia(int id);
+
+  // Historial de cambios, del más antiguo al más reciente (F9)
+  Future<List<EntradaHistorial>> obtenerHistorial(int id);
+
+  // Imágenes de la incidencia (F9)
+  Future<List<Evidencia>> obtenerEvidencias(int id);
+
+  // Cancela una incidencia pendiente (F9)
+  Future<void> cancelarIncidencia(int id);
+
+  // Sube fotos de la incidencia y devuelve las evidencias guardadas
+  Future<List<Evidencia>> subirEvidencias(int id, List<FotoSeleccionada> fotos);
 }
 
 class ApiIncidenciasRepository implements IncidenciasRepository {
@@ -164,6 +182,86 @@ class ApiIncidenciasRepository implements IncidenciasRepository {
     return _convertirIncidencia(body);
   }
 
+  // GET /api/incidencias/:id. Respuesta 200: el objeto incidencia completo
+  @override
+  Future<Incidencia> obtenerIncidencia(int id) async {
+    final body = await _getJson(
+      Uri.parse('$baseUrl/incidencias/$id'),
+      recurso: 'la incidencia',
+    );
+    return _convertirIncidencia(body);
+  }
+
+  // GET /api/incidencias/:id/historial
+  @override
+  Future<List<EntradaHistorial>> obtenerHistorial(int id) async {
+    final body = await _getJson(
+      Uri.parse('$baseUrl/incidencias/$id/historial'),
+      recurso: 'el historial',
+    );
+    return _convertirLista(body, EntradaHistorial.fromJson);
+  }
+
+  // GET /api/incidencias/:id/evidencias. Las URL vienen sin el host
+  @override
+  Future<List<Evidencia>> obtenerEvidencias(int id) async {
+    final body = await _getJson(
+      Uri.parse('$baseUrl/incidencias/$id/evidencias'),
+      recurso: 'las evidencias',
+    );
+    final servidor = Uri.parse(baseUrl).origin;
+    return _convertirLista(
+      body,
+      (json) => Evidencia.fromJson(json, servidor: servidor),
+    );
+  }
+
+  // DELETE /api/incidencias/:id. Respuesta 200: { ok, mensaje, estado }
+  @override
+  Future<void> cancelarIncidencia(int id) async {
+    await _procesar(
+      _client.delete(Uri.parse('$baseUrl/incidencias/$id'), headers: _headers),
+      recurso: 'la incidencia',
+    );
+  }
+
+  // POST /api/incidencias/:id/evidencias
+  // Respuesta 201: lista de evidencias guardadas
+  @override
+  Future<List<Evidencia>> subirEvidencias(
+    int id,
+    List<FotoSeleccionada> fotos,
+  ) async {
+    final peticion =
+        http.MultipartRequest(
+            'POST',
+            Uri.parse('$baseUrl/incidencias/$id/evidencias'),
+          )
+          ..headers.addAll(_headers)
+          ..files.addAll([
+            for (final foto in fotos)
+              http.MultipartFile.fromBytes(
+                'imagenes',
+                foto.bytes,
+                filename: foto.nombre,
+                contentType: MediaType.parse(foto.tipoMime),
+              ),
+          ]);
+
+    final body = await _procesar(
+      _client.send(peticion).then(http.Response.fromStream),
+      recurso: 'las evidencias',
+      codigoEsperado: 201,
+      // Subir fotos tarda más que una petición normal
+      tiempoMax: const Duration(seconds: 60),
+    );
+    final servidor = Uri.parse(baseUrl).origin;
+    return _convertirLista(
+      body,
+      (json) => Evidencia.fromJson(json, servidor: servidor),
+    );
+  }
+
   // Hace un GET y devuelve el JSON, o lanza una excepción
   Future<dynamic> _getJson(Uri uri, {required String recurso}) =>
       _procesar(_client.get(uri, headers: _headers), recurso: recurso);
@@ -174,10 +272,11 @@ class ApiIncidenciasRepository implements IncidenciasRepository {
     Future<http.Response> peticion, {
     required String recurso,
     int codigoEsperado = 200,
+    Duration tiempoMax = const Duration(seconds: 15),
   }) async {
     final http.Response res;
     try {
-      res = await peticion.timeout(const Duration(seconds: 15));
+      res = await peticion.timeout(tiempoMax);
     } on TimeoutException {
       throw ApiException('El servidor tardó demasiado en responder');
     } catch (_) {

@@ -1,8 +1,11 @@
 import '../models/categoria.dart';
 import '../models/estado_incidencia.dart';
+import '../models/evidencia.dart';
+import '../models/historial.dart';
 import '../models/incidencia.dart';
 import 'incidencias_repository.dart';
 import '../models/datos_incidencia.dart';
+import '../services/servicio_imagenes.dart';
 
 /// Datos simulados con los estados y roles del contrato (docs/api.md).
 /// Se usa mientras el backend no tenga GET /api/incidencias/resumen.
@@ -48,6 +51,8 @@ class FakeIncidenciasRepository implements IncidenciasRepository {
       categoria: _electricidad,
       reportadoPor: _ana,
       ubicacionTexto: 'Edificio 3, planta baja',
+      latitud: 21.913600,
+      longitud: -102.315800,
       fechaCreacion: DateTime(2026, 11, 12, 9, 15),
     ),
     Incidencia(
@@ -70,6 +75,8 @@ class FakeIncidenciasRepository implements IncidenciasRepository {
       reportadoPor: _ana,
       operador: _luis,
       ubicacionTexto: 'Edificio 2, aula 204',
+      latitud: 21.914250,
+      longitud: -102.316420,
       fechaCreacion: DateTime(2026, 11, 8, 10, 5),
     ),
     Incidencia(
@@ -81,7 +88,10 @@ class FakeIncidenciasRepository implements IncidenciasRepository {
       reportadoPor: _ana,
       operador: _luis,
       ubicacionTexto: 'Laboratorio de cómputo 1',
+      solucionDescripcion:
+          'Se cambió el contacto dañado y se revisó el cableado del muro.',
       fechaCreacion: DateTime(2026, 11, 5, 16, 20),
+      fechaFinalizacion: DateTime(2026, 11, 7, 12, 0),
     ),
     Incidencia(
       id: 5,
@@ -163,6 +173,7 @@ class FakeIncidenciasRepository implements IncidenciasRepository {
   @override
   Future<Incidencia> crearIncidencia(DatosIncidencia datos) async {
     await _esperar();
+    _validarUbicacion(datos);
     final nueva = Incidencia(
       id: _siguienteId++,
       titulo: datos.titulo,
@@ -174,9 +185,12 @@ class FakeIncidenciasRepository implements IncidenciasRepository {
         orElse: () => PersonaIncidencia(id: idUsuario, nombre: 'Usuario'),
       ),
       ubicacionTexto: datos.ubicacionTexto,
+      latitud: datos.latitud,
+      longitud: datos.longitud,
       fechaCreacion: DateTime.now(),
     );
     _incidencias.add(nueva);
+    _historialDe(nueva);
     return nueva;
   }
 
@@ -188,6 +202,7 @@ class FakeIncidenciasRepository implements IncidenciasRepository {
       throw ApiException('La incidencia no existe', statusCode: 404);
     }
     final actual = _incidencias[posicion];
+    _validarUbicacion(datos);
 
     if (actual.reportadoPor.id != idUsuario) {
       throw ApiException(
@@ -212,11 +227,264 @@ class FakeIncidenciasRepository implements IncidenciasRepository {
       reportadoPor: actual.reportadoPor,
       operador: actual.operador,
       ubicacionTexto: datos.ubicacionTexto,
+      latitud: datos.latitud,
+      longitud: datos.longitud,
+      solucionDescripcion: actual.solucionDescripcion,
       fechaCreacion: actual.fechaCreacion,
+      fechaActualizacion: DateTime.now(),
+      fechaFinalizacion: actual.fechaFinalizacion,
+    );
+    _historialDe(actual).add(
+      _entrada(AccionHistorial.edicion, actual.reportadoPor, DateTime.now()),
     );
     _incidencias[posicion] = editada;
     return editada;
   }
+
+  void _validarUbicacion(DatosIncidencia datos) {
+    if (!datos.tieneUbicacion) {
+      throw ApiException(
+        'Datos inválidos',
+        statusCode: 400,
+        errores: {
+          'ubicacion_texto': 'Indica la ubicación: texto, o latitud y longitud',
+        },
+      );
+    }
+  }
+
+  @override
+  Future<Incidencia> obtenerIncidencia(int id) async {
+    await _esperar();
+    return _buscarVisible(id);
+  }
+
+  @override
+  Future<List<EntradaHistorial>> obtenerHistorial(int id) async {
+    await _esperar();
+    final incidencia = _buscarVisible(id);
+    return List.of(_historialDe(incidencia))
+      ..sort((a, b) => a.fecha.compareTo(b.fecha));
+  }
+
+  @override
+  Future<List<Evidencia>> obtenerEvidencias(int id) async {
+    await _esperar();
+    _buscarVisible(id);
+    return _evidencias[id] ?? const [];
+  }
+
+  @override
+  Future<void> cancelarIncidencia(int id) async {
+    await _esperar();
+    final posicion = _incidencias.indexWhere((i) => i.id == id);
+    if (posicion == -1) {
+      throw ApiException('Incidencia no encontrada', statusCode: 404);
+    }
+    final actual = _incidencias[posicion];
+
+    // El usuario solo cancela las suyas; el operador cualquiera
+    if (!esOperador && actual.reportadoPor.id != idUsuario) {
+      throw ApiException(
+        'No tienes permiso para realizar esta acción',
+        statusCode: 403,
+      );
+    }
+    if (actual.estado != EstadoIncidencia.pendiente) {
+      throw ApiException(
+        'Solo se puede cancelar una incidencia pendiente',
+        statusCode: 400,
+      );
+    }
+
+    _historialDe(actual).add(
+      _entrada(
+        AccionHistorial.cambioEstado,
+        _personaActual,
+        DateTime.now(),
+        anterior: EstadoIncidencia.pendiente,
+        nuevo: EstadoIncidencia.cancelada,
+      ),
+    );
+    _incidencias[posicion] = actual.conEstado(EstadoIncidencia.cancelada);
+  }
+
+  // Igual que el backend: 404 si no existe y 403 si es de otro usuario
+  Incidencia _buscarVisible(int id) {
+    final posicion = _incidencias.indexWhere((i) => i.id == id);
+    if (posicion == -1) {
+      throw ApiException('Incidencia no encontrada', statusCode: 404);
+    }
+    final incidencia = _incidencias[posicion];
+    if (!esOperador && incidencia.reportadoPor.id != idUsuario) {
+      throw ApiException(
+        'No tienes permiso para realizar esta acción',
+        statusCode: 403,
+      );
+    }
+    return incidencia;
+  }
+
+  PersonaIncidencia get _personaActual => _personas.firstWhere(
+    (p) => p.id == idUsuario,
+    orElse: () => PersonaIncidencia(id: idUsuario, nombre: 'Usuario'),
+  );
+
+  // ---------- Historial y evidencias simulados ----------
+
+  static int _siguienteIdEvidencia = 100;
+
+  @override
+  Future<List<Evidencia>> subirEvidencias(
+    int id,
+    List<FotoSeleccionada> fotos,
+  ) async {
+    await _esperar();
+    // Mismos permisos que el backend
+    _buscarVisible(id);
+    if (fotos.isEmpty || fotos.length > LimitesIncidencia.fotosMax) {
+      throw ApiException(
+        'Envía de 1 a ${LimitesIncidencia.fotosMax} imágenes',
+        statusCode: 400,
+      );
+    }
+
+    final nuevas = [
+      for (final foto in fotos)
+        Evidencia(
+          id: _siguienteIdEvidencia++,
+          tipo: esOperador ? 'atencion' : 'reporte',
+          // Sin servidor, la imagen se guarda dentro de la URL (data:)
+          url: Uri.dataFromBytes(
+            foto.bytes,
+            mimeType: foto.tipoMime,
+          ).toString(),
+          nombreOriginal: foto.nombre,
+          fechaSubida: DateTime.now(),
+        ),
+    ];
+    _evidencias.putIfAbsent(id, () => []).addAll(nuevas);
+    return nuevas;
+  }
+
+  static int _siguienteIdHistorial = 1;
+  static final Map<int, List<EntradaHistorial>> _historiales = {};
+
+  static EntradaHistorial _entrada(
+    AccionHistorial accion,
+    PersonaIncidencia responsable,
+    DateTime fecha, {
+    EstadoIncidencia? anterior,
+    EstadoIncidencia? nuevo,
+    String? comentario,
+  }) => EntradaHistorial(
+    id: _siguienteIdHistorial++,
+    accion: accion,
+    estadoAnterior: anterior,
+    estadoNuevo: nuevo,
+    comentario: comentario,
+    fecha: fecha,
+    responsable: responsable,
+  );
+
+  // Se arma la primera vez a partir del estado de la incidencia
+  static List<EntradaHistorial> _historialDe(Incidencia i) =>
+      _historiales.putIfAbsent(i.id, () {
+        const pendiente = EstadoIncidencia.pendiente;
+        const asignada = EstadoIncidencia.asignada;
+        const enProceso = EstadoIncidencia.enProceso;
+        const finalizada = EstadoIncidencia.finalizada;
+        final operador = i.operador ?? _luis;
+        final inicio = i.fechaCreacion;
+
+        return [
+          _entrada(
+            AccionHistorial.creacion,
+            i.reportadoPor,
+            inicio,
+            nuevo: pendiente,
+          ),
+          if ([asignada, enProceso, finalizada].contains(i.estado))
+            _entrada(
+              AccionHistorial.cambioEstado,
+              operador,
+              inicio.add(const Duration(hours: 20)),
+              anterior: pendiente,
+              nuevo: asignada,
+            ),
+          if ([enProceso, finalizada].contains(i.estado))
+            _entrada(
+              AccionHistorial.cambioEstado,
+              operador,
+              inicio.add(const Duration(days: 1, hours: 2)),
+              anterior: asignada,
+              nuevo: enProceso,
+              comentario: 'Se revisó en sitio',
+            ),
+          if (i.estado == finalizada)
+            _entrada(
+              AccionHistorial.cambioEstado,
+              operador,
+              i.fechaFinalizacion ?? inicio.add(const Duration(days: 2)),
+              anterior: enProceso,
+              nuevo: finalizada,
+              comentario: 'Trabajo concluido',
+            ),
+          if (i.estado == EstadoIncidencia.cancelada)
+            _entrada(
+              AccionHistorial.cambioEstado,
+              i.reportadoPor,
+              inicio.add(const Duration(hours: 3)),
+              anterior: pendiente,
+              nuevo: EstadoIncidencia.cancelada,
+              comentario: 'Reporte duplicado',
+            ),
+        ];
+      });
+
+  static final Map<int, List<Evidencia>> _evidencias = {
+    2: [
+      Evidencia(
+        id: 1,
+        tipo: 'reporte',
+        url: 'https://picsum.photos/seed/fuga-1/800/600',
+        nombreOriginal: 'lavabo.jpg',
+        fechaSubida: DateTime(2026, 11, 10, 13, 42),
+      ),
+      Evidencia(
+        id: 2,
+        tipo: 'reporte',
+        url: 'https://picsum.photos/seed/fuga-2/800/600',
+        nombreOriginal: 'piso.jpg',
+        fechaSubida: DateTime(2026, 11, 10, 13, 43),
+      ),
+    ],
+    3: [
+      Evidencia(
+        id: 3,
+        tipo: 'reporte',
+        url: 'https://picsum.photos/seed/silla-1/800/600',
+        nombreOriginal: 'silla.jpg',
+        fechaSubida: DateTime(2026, 11, 8, 10, 6),
+      ),
+    ],
+    4: [
+      Evidencia(
+        id: 4,
+        tipo: 'reporte',
+        url: 'https://picsum.photos/seed/contacto-1/800/600',
+        nombreOriginal: 'contacto.jpg',
+        fechaSubida: DateTime(2026, 11, 5, 16, 22),
+      ),
+      Evidencia(
+        id: 5,
+        tipo: 'atencion',
+        url: 'https://picsum.photos/seed/contacto-2/800/600',
+        nombreOriginal: 'reparado.jpg',
+        fechaSubida: DateTime(2026, 11, 7, 11, 55),
+      ),
+    ],
+  };
 
   // Igual que en el backend la categoría debe existir y estar activa
   Categoria _buscarCategoria(int id) => _categorias.firstWhere(

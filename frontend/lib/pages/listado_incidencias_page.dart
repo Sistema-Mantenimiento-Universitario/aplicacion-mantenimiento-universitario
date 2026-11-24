@@ -129,7 +129,7 @@ class _ListadoIncidenciasPageState extends State<ListadoIncidenciasPage> {
   Future<void> _abrirDetalle(Incidencia incidencia) async {
     await Navigator.pushNamed(
       context,
-      Rutas.detalleIncidencia,
+      Rutas.detalle(incidencia.id),
       arguments: incidencia.id,
     );
     // Al volver se recarga, en caso de que la incidencia tuviera un cambio en el detalle

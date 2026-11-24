@@ -7,12 +7,15 @@ import 'package:mantenimiento_universitario/data/incidencias_fake_repository.dar
 import 'package:mantenimiento_universitario/data/incidencias_repository.dart';
 import 'package:mantenimiento_universitario/models/categoria.dart';
 import 'package:mantenimiento_universitario/models/estado_incidencia.dart';
+import 'package:mantenimiento_universitario/models/evidencia.dart';
+import 'package:mantenimiento_universitario/models/historial.dart';
 import 'package:mantenimiento_universitario/models/incidencia.dart';
 import 'package:mantenimiento_universitario/models/usuario.dart';
 import 'package:mantenimiento_universitario/pages/listado_incidencias_page.dart';
 import 'package:mantenimiento_universitario/pages/rutas.dart';
 import 'package:mantenimiento_universitario/theme/app_theme.dart';
 import 'package:mantenimiento_universitario/models/datos_incidencia.dart';
+import 'package:mantenimiento_universitario/services/servicio_imagenes.dart';
 
 const _ana = Usuario(
   id: 1,
@@ -57,6 +60,24 @@ class _RepositorioConError implements IncidenciasRepository {
   @override
   Future<Incidencia> editarIncidencia(int id, DatosIncidencia datos) async =>
       throw error;
+
+  @override
+  Future<Incidencia> obtenerIncidencia(int id) async => throw error;
+
+  @override
+  Future<List<EntradaHistorial>> obtenerHistorial(int id) async => throw error;
+
+  @override
+  Future<List<Evidencia>> obtenerEvidencias(int id) async => throw error;
+
+  @override
+  Future<void> cancelarIncidencia(int id) async => throw error;
+
+  @override
+  Future<List<Evidencia>> subirEvidencias(
+    int id,
+    List<FotoSeleccionada> fotos,
+  ) async => throw error;
 }
 
 Future<void> _abrirListado(
@@ -85,11 +106,15 @@ Future<void> _abrirListado(
             ),
         onSesionExpirada: onSesionExpirada,
       ),
-      routes: {
-        Rutas.detalleIncidencia: (context) => Scaffold(
-          body: Text('Detalle ${ModalRoute.of(context)!.settings.arguments}'),
-        ),
-      },
+      // El detalle se abre con el id en la URL: /incidencias/detalle?id=1
+      onGenerateRoute: (settings) =>
+          Rutas.base(settings.name!) == Rutas.detalleIncidencia
+          ? MaterialPageRoute<void>(
+              settings: settings,
+              builder: (_) =>
+                  Scaffold(body: Text('Detalle ${Rutas.idDe(settings.name!)}')),
+            )
+          : null,
     ),
   );
   await tester.pumpAndSettle();

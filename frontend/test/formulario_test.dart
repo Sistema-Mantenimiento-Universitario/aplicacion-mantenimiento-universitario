@@ -1,15 +1,20 @@
 // Pruebas del formulario para crear y editar incidencias.
 // Usan el repositorio simulado
+import 'dart:convert';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 import 'package:mantenimiento_universitario/data/incidencias_fake_repository.dart';
 import 'package:mantenimiento_universitario/data/incidencias_repository.dart';
 import 'package:mantenimiento_universitario/models/categoria.dart';
+import 'package:mantenimiento_universitario/models/evidencia.dart';
 import 'package:mantenimiento_universitario/models/datos_incidencia.dart';
 import 'package:mantenimiento_universitario/models/incidencia.dart';
 import 'package:mantenimiento_universitario/models/usuario.dart';
 import 'package:mantenimiento_universitario/pages/formulario_incidencia_page.dart';
+import 'package:mantenimiento_universitario/services/servicio_imagenes.dart';
+import 'package:mantenimiento_universitario/services/servicio_ubicacion.dart';
 import 'package:mantenimiento_universitario/theme/app_theme.dart';
 
 const _ana = Usuario(
@@ -21,12 +26,27 @@ const _ana = Usuario(
 
 // Repositorio simulado que cuenta los envíos y puede fallar a propósito
 class _RepositorioPrueba extends FakeIncidenciasRepository {
-  _RepositorioPrueba({this.errorAlGuardar, this.errorCategorias})
-    : super(idUsuario: 1, esOperador: false, demora: Duration.zero);
+  _RepositorioPrueba({
+    this.errorAlGuardar,
+    this.errorCategorias,
+    this.errorAlSubir,
+  }) : super(idUsuario: 1, esOperador: false, demora: Duration.zero);
 
   final ApiException? errorAlGuardar;
   final ApiException? errorCategorias;
+  final ApiException? errorAlSubir;
   int envios = 0;
+  int fotosSubidas = 0;
+
+  @override
+  Future<List<Evidencia>> subirEvidencias(
+    int id,
+    List<FotoSeleccionada> fotos,
+  ) async {
+    if (errorAlSubir != null) throw errorAlSubir!;
+    fotosSubidas += fotos.length;
+    return super.subirEvidencias(id, fotos);
+  }
 
   @override
   Future<List<Categoria>> obtenerCategorias() async {
@@ -49,6 +69,45 @@ class _RepositorioPrueba extends FakeIncidenciasRepository {
   }
 }
 
+// GPS simulado que devuelve unas coordenadas fijas o el error indicado
+class _UbicacionPrueba extends ServicioUbicacion {
+  const _UbicacionPrueba({this.error});
+  final String? error;
+
+  @override
+  Future<Coordenadas> obtenerUbicacion() async {
+    if (error != null) throw UbicacionException(error!);
+    return (latitud: 21.9136, longitud: -102.3158);
+  }
+}
+
+// Imagen PNG de 1x1 pixel
+final _png = base64Decode(
+  'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNkYPhfDwAChwGA60e6kgAAAABJRU5ErkJggg==',
+);
+
+// Cámara y galería simuladas
+class _ImagenesPrueba extends ServicioImagenes {
+  _ImagenesPrueba({this.error});
+  final String? error;
+
+  @override
+  bool get hayCamara => true;
+
+  @override
+  Future<FotoSeleccionada?> tomarFoto() async {
+    if (error != null) throw ImagenException(error!);
+    return FotoSeleccionada(
+      nombre: 'foto.png',
+      bytes: _png,
+      tipoMime: 'image/png',
+    );
+  }
+
+  @override
+  Future<FotoSeleccionada?> elegirDeGaleria() => tomarFoto();
+}
+
 // Abre una pantalla con un botón que lleva al formulario
 Future<void> _abrirFormulario(
   WidgetTester tester,
@@ -56,8 +115,10 @@ Future<void> _abrirFormulario(
   Incidencia? incidencia,
   ValueChanged<Incidencia?>? alRegresar,
   VoidCallback? onSesionExpirada,
+  ServicioUbicacion ubicacion = const _UbicacionPrueba(),
+  ServicioImagenes? imagenes,
 }) async {
-  tester.view.physicalSize = const Size(800, 1600);
+  tester.view.physicalSize = const Size(800, 2400);
   tester.view.devicePixelRatio = 1.0;
   addTearDown(tester.view.reset);
 
@@ -77,6 +138,8 @@ Future<void> _abrirFormulario(
                       repositorio: repositorio,
                       incidencia: incidencia,
                       onSesionExpirada: onSesionExpirada,
+                      servicioUbicacion: ubicacion,
+                      servicioImagenes: imagenes ?? _ImagenesPrueba(),
                     ),
                   ),
                 );
@@ -126,7 +189,10 @@ void main() {
     expect(find.text('Escribe el título'), findsOneWidget);
     expect(find.text('Elige una categoría'), findsOneWidget);
     expect(find.text('Escribe la descripción'), findsOneWidget);
-    expect(find.text('Escribe la ubicación'), findsOneWidget);
+    expect(
+      find.text('Escribe la ubicación o usa tu ubicación actual'),
+      findsOneWidget,
+    );
     expect(repositorio.envios, 0);
   });
 
@@ -305,5 +371,163 @@ void main() {
 
     expect(find.text('No se pudo conectar con el servidor'), findsOneWidget);
     expect(find.text('Reintentar'), findsOneWidget);
+  });
+
+  testWidgets('Usar mi ubicación llena las coordenadas', (tester) async {
+    Incidencia? guardada;
+    await _abrirFormulario(
+      tester,
+      _RepositorioPrueba(),
+      alRegresar: (incidencia) => guardada = incidencia,
+    );
+
+    await tester.enterText(_campo('Título'), 'Ventana rota en el aula 305');
+    await _elegirCategoria(tester, 'Mobiliario');
+    await tester.enterText(
+      _campo('Descripción'),
+      'El vidrio de la ventana del fondo está estrellado.',
+    );
+    await tester.tap(find.text('Usar mi ubicación'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('21.913600'), findsOneWidget);
+    expect(find.text('-102.315800'), findsOneWidget);
+
+    // Con coordenadas, la ubicación en texto ya no es obligatoria
+    await tester.tap(find.text('Crear incidencia'));
+    await tester.pumpAndSettle();
+
+    expect(guardada?.latitud, 21.9136);
+    expect(guardada?.longitud, -102.3158);
+    expect(guardada?.ubicacionTexto, isNull);
+  });
+
+  testWidgets('Si no hay permiso de ubicación muestra el mensaje', (
+    tester,
+  ) async {
+    await _abrirFormulario(
+      tester,
+      _RepositorioPrueba(),
+      ubicacion: const _UbicacionPrueba(
+        error: 'No se dio permiso de ubicación',
+      ),
+    );
+
+    await tester.tap(find.text('Usar mi ubicación'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('No se dio permiso de ubicación'), findsOneWidget);
+    // El formulario sigue disponible
+    expect(find.text('Crear incidencia'), findsOneWidget);
+  });
+
+  testWidgets('Coordenadas a mano: pide las dos y revisa el rango', (
+    tester,
+  ) async {
+    final repositorio = _RepositorioPrueba();
+    await _abrirFormulario(tester, repositorio);
+
+    await _llenarFormulario(tester);
+    await tester.enterText(_campo('Latitud'), '95');
+    await tester.tap(find.text('Crear incidencia'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Debe estar entre -90 y 90'), findsOneWidget);
+    expect(find.text('Escribe también la longitud'), findsOneWidget);
+    expect(repositorio.envios, 0);
+  });
+
+  testWidgets('Fotos: se agregan, se quitan y se suben al guardar', (
+    tester,
+  ) async {
+    final repositorio = _RepositorioPrueba();
+    await _abrirFormulario(tester, repositorio);
+
+    await tester.tap(find.text('Tomar foto'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Galería'));
+    await tester.pumpAndSettle();
+    expect(find.text('Fotos (opcional) · 2 de 5'), findsOneWidget);
+
+    await tester.tap(find.byTooltip('Quitar foto').first);
+    await tester.pumpAndSettle();
+    expect(find.text('Fotos (opcional) · 1 de 5'), findsOneWidget);
+
+    await _llenarFormulario(tester);
+    await tester.tap(find.text('Crear incidencia'));
+    await tester.pumpAndSettle();
+
+    expect(repositorio.fotosSubidas, 1);
+    expect(find.text('Incidencia creada'), findsOneWidget);
+  });
+
+  testWidgets('Si la foto no es válida muestra el motivo', (tester) async {
+    await _abrirFormulario(
+      tester,
+      _RepositorioPrueba(),
+      imagenes: _ImagenesPrueba(
+        error: 'Solo se permiten imágenes JPG, PNG o WEBP',
+      ),
+    );
+
+    await tester.tap(find.text('Tomar foto'));
+    await tester.pumpAndSettle();
+
+    expect(
+      find.text('Solo se permiten imágenes JPG, PNG o WEBP'),
+      findsOneWidget,
+    );
+    expect(find.text('Fotos (opcional) · 0 de 5'), findsOneWidget);
+  });
+
+  testWidgets('Si fallan las fotos, la incidencia se guarda y avisa', (
+    tester,
+  ) async {
+    Incidencia? guardada;
+    final repositorio = _RepositorioPrueba(
+      errorAlSubir: ApiException('El servidor no encontró las evidencias'),
+    );
+    await _abrirFormulario(
+      tester,
+      repositorio,
+      alRegresar: (incidencia) => guardada = incidencia,
+    );
+
+    await tester.tap(find.text('Tomar foto'));
+    await tester.pumpAndSettle();
+    await _llenarFormulario(tester);
+    await tester.tap(find.text('Crear incidencia'));
+    await tester.pumpAndSettle();
+
+    expect(guardada, isNotNull);
+    expect(
+      find.textContaining('pero no se pudieron subir las fotos'),
+      findsOneWidget,
+    );
+  });
+
+  testWidgets('Editar conserva las coordenadas de la incidencia', (
+    tester,
+  ) async {
+    final repositorio = _RepositorioPrueba();
+    final lampara = (await repositorio.obtenerIncidencias()).firstWhere(
+      (i) => i.titulo.startsWith('Lámpara fundida'),
+    );
+    final completa = await repositorio.obtenerIncidencia(lampara.id);
+    Incidencia? guardada;
+    await _abrirFormulario(
+      tester,
+      repositorio,
+      incidencia: completa,
+      alRegresar: (incidencia) => guardada = incidencia,
+    );
+
+    expect(find.text('21.913600'), findsOneWidget);
+
+    await tester.tap(find.text('Guardar cambios'));
+    await tester.pumpAndSettle();
+
+    expect(guardada?.latitud, 21.9136);
+    expect(guardada?.longitud, -102.3158);
   });
 }

@@ -11,7 +11,7 @@ import 'rutas.dart';
 // Lo que se escribe al cambiar de estado
 typedef DatosCambioEstado = ({String? solucion, String? comentario});
 
-// F10 · Panel de administración y seguimiento para el operador
+// F10  Panel de administración y seguimiento para el operador
 class PanelOperadorPage extends StatefulWidget {
   const PanelOperadorPage({
     super.key,
@@ -173,7 +173,7 @@ class _PanelOperadorPageState extends State<PanelOperadorPage> {
             Padding(
               padding: const EdgeInsets.fromLTRB(24, 0, 24, 8),
               child: Text(
-                '#${incidencia.id} · ${incidencia.titulo}',
+                '#${incidencia.id}  ${incidencia.titulo}',
                 style: Theme.of(contextHoja).textTheme.titleMedium,
               ),
             ),
@@ -285,13 +285,13 @@ class _PanelOperadorPageState extends State<PanelOperadorPage> {
       runSpacing: 8,
       children: [
         ChoiceChip(
-          label: Text('Todas · $total'),
+          label: Text('Todas  $total'),
           selected: _filtro == null,
           onSelected: (_) => setState(() => _filtro = null),
         ),
         for (final estado in _orden)
           ChoiceChip(
-            label: Text('${estado.etiqueta} · ${_dePorEstado(estado).length}'),
+            label: Text('${estado.etiqueta}  ${_dePorEstado(estado).length}'),
             selected: _filtro == estado,
             onSelected: (_) => setState(() => _filtro = estado),
           ),
@@ -454,11 +454,11 @@ class _TarjetaIncidencia extends StatelessWidget {
                     ),
                     const SizedBox(height: 4),
                     Text(
-                      '#${i.id} · ${i.categoria.nombre} · ${_fecha(i.fechaCreacion)}',
+                      '#${i.id}  ${i.categoria.nombre}  ${_fecha(i.fechaCreacion)}',
                       style: theme.textTheme.bodySmall,
                     ),
                     Text(
-                      'Reportó: ${i.reportadoPor.nombre} · Operador: $operador',
+                      'Reportó: ${i.reportadoPor.nombre}  Operador: $operador',
                       style: theme.textTheme.bodySmall,
                     ),
                     const SizedBox(height: 6),
@@ -585,7 +585,7 @@ class _DialogoCambioEstadoState extends State<_DialogoCambioEstado> {
               mainAxisSize: MainAxisSize.min,
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
-                Text('#${widget.incidencia.id} · ${widget.incidencia.titulo}'),
+                Text('#${widget.incidencia.id}  ${widget.incidencia.titulo}'),
                 const SizedBox(height: 4),
                 Row(
                   children: [

@@ -1,4 +1,5 @@
 const { pool } = require('../config/db');
+const { transicionPermitida } = require('../services/estado.service');
 
 // Consulta base: incidencia con el nombre de su categoría, de quien reporta
 // y del operador que la atiende (si ya tiene uno)
@@ -228,4 +229,65 @@ const resumen = async ({ idUsuario }) => {
   return { ...conteo, total };
 };
 
-module.exports = { crear, buscarPorId, listar, actualizar, cancelar, resumen };
+// Cambia el estado de una incidencia y lo registra en el historial.
+const cambiarEstado = async (idIncidencia, idOperador, datos) => {
+  const conexion = await pool.getConnection();
+  try {
+    await conexion.beginTransaction();
+
+    // FOR UPDATE bloquea la fila: si dos operadores la cambian al mismo
+    // tiempo, el segundo espera y ve el estado ya actualizado
+    const [filas] = await conexion.execute(
+      'SELECT estado FROM incidencias WHERE id_incidencia = ? FOR UPDATE',
+      [idIncidencia]
+    );
+    if (!filas[0]) {
+      await conexion.rollback();
+      return { resultado: 'no_encontrada' };
+    }
+
+    const estadoAnterior = filas[0].estado;
+    if (!transicionPermitida(estadoAnterior, datos.estado)) {
+      await conexion.rollback();
+      return { resultado: 'no_permitida', estadoAnterior };
+    }
+
+    if (datos.estado === 'asignada') {
+      // El operador que la asigna queda como responsable
+      await conexion.execute(
+        "UPDATE incidencias SET estado = 'asignada', id_operador = ? WHERE id_incidencia = ?",
+        [idOperador, idIncidencia]
+      );
+    } else if (datos.estado === 'finalizada') {
+      // Regla del sistema: la solucion y la fecha de finalizacion van juntas
+      await conexion.execute(
+        `UPDATE incidencias
+           SET estado = 'finalizada', solucion_descripcion = ?, fecha_finalizacion = NOW()
+         WHERE id_incidencia = ?`,
+        [datos.solucion_descripcion, idIncidencia]
+      );
+    } else {
+      await conexion.execute(
+        'UPDATE incidencias SET estado = ? WHERE id_incidencia = ?',
+        [datos.estado, idIncidencia]
+      );
+    }
+
+    await conexion.execute(
+      `INSERT INTO historial
+         (id_incidencia, id_usuario, accion, estado_anterior, estado_nuevo, comentario)
+       VALUES (?, ?, 'cambio_estado', ?, ?, ?)`,
+      [idIncidencia, idOperador, estadoAnterior, datos.estado, datos.comentario]
+    );
+
+    await conexion.commit();
+    return { resultado: 'ok' };
+  } catch (error) {
+    await conexion.rollback();
+    throw error;
+  } finally {
+    conexion.release();
+  }
+};
+
+module.exports = { crear, buscarPorId, listar, actualizar, cancelar, resumen, cambiarEstado };

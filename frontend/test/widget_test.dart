@@ -74,6 +74,13 @@ class _RepositorioConError implements IncidenciasRepository {
     int id,
     List<FotoSeleccionada> fotos,
   ) async => throw ApiException('No se pudo conectar con el servidor');
+  @override
+  Future<Incidencia> cambiarEstado(
+    int id,
+    EstadoIncidencia nuevoEstado, {
+    String? solucion,
+    String? comentario,
+  }) async => throw ApiException('No se pudo conectar con el servidor');
 }
 
 Future<void> _abrirHome(

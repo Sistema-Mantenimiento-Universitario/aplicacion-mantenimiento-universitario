@@ -1,4 +1,4 @@
-// Pruebas de la F10 · Panel de administración del operador.
+// Panel de administración del operador.
 // Usan el repositorio simulado (sus datos cambian dentro de este archivo,
 // por eso cada prueba usa incidencias distintas).
 import 'package:flutter/material.dart';

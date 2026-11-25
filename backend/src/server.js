@@ -7,6 +7,7 @@ const authRoutes = require('./routes/auth.routes');
 const { probarConexion } = require('./config/db');
 const incidenciasRoutes = require('./routes/incidencias.routes');
 const categoriasRoutes = require('./routes/categorias.routes');
+const { rutaNoEncontrada, manejarErrores } = require('./middlewares/error.middleware');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -18,6 +19,9 @@ app.use('/api/prueba', pruebaRoutes);
 app.use('/api/auth', authRoutes);
 app.use('/api/incidencias', incidenciasRoutes);
 app.use('/api/categorias', categoriasRoutes);
+
+app.use(rutaNoEncontrada);
+app.use(manejarErrores);
 
 app.listen(PORT, async () => {
   console.log(`Servidor corriendo en http://localhost:${PORT}`);

@@ -6,6 +6,7 @@ const {
   detalle,
   editar,
   cancelar,
+  cambiarEstado,
   historial,
 } = require('../controllers/incidencias.controller');
 const { verificarToken, verificarRol } = require('../middlewares/auth.middleware');
@@ -23,5 +24,6 @@ router.get('/:id', detalle);
 router.get('/:id/historial', historial);
 router.put('/:id', verificarRol('usuario'), editar);
 router.delete('/:id', verificarRol('usuario', 'operador'), cancelar);
+router.patch('/:id/estado', verificarRol('operador'), cambiarEstado);
 
 module.exports = router;

@@ -303,6 +303,83 @@ const cancelar = async (req, res) => {
   }
 };
 
+// Estados a los que el operador puede mover una incidencia con PATCH
+const ESTADOS_NUEVOS = ['asignada', 'en_proceso', 'finalizada', 'cancelada'];
+
+// PATCH /api/incidencias/:id/estado (solo operador)
+const cambiarEstado = async (req, res) => {
+  const id = obtenerIdValido(req, res);
+  if (id === null) return;
+
+  const { estado, solucion_descripcion, comentario } = req.body ?? {};
+  const errores = [];
+
+  if (!ESTADOS_NUEVOS.includes(estado)) {
+    errores.push({
+      campo: 'estado',
+      mensaje: `Estado no válido. Valores permitidos: ${ESTADOS_NUEVOS.join(', ')}`,
+    });
+  }
+
+  // Regla del sistema: para finalizar es obligatoria la solución aplicada
+  let solucion = null;
+  if (estado === 'finalizada') {
+    if (typeof solucion_descripcion === 'string') {
+      solucion = solucion_descripcion.trim();
+    }
+    if (!solucion) {
+      errores.push({
+        campo: 'solucion_descripcion',
+        mensaje: 'La solución aplicada es obligatoria para finalizar',
+      });
+    } else if (solucion.length < 10 || solucion.length > 2000) {
+      errores.push({
+        campo: 'solucion_descripcion',
+        mensaje: 'La solución debe tener entre 10 y 2000 caracteres',
+      });
+    }
+  }
+
+  // Comentario opcional para el historial
+  let textoComentario = null;
+  if (comentario !== undefined && comentario !== null) {
+    if (typeof comentario !== 'string') {
+      errores.push({ campo: 'comentario', mensaje: 'El comentario debe ser texto' });
+    } else if (comentario.trim().length > 500) {
+      errores.push({ campo: 'comentario', mensaje: 'El comentario debe tener máximo 500 caracteres' });
+    } else if (comentario.trim()) {
+      textoComentario = comentario.trim();
+    }
+  }
+
+  if (errores.length > 0) {
+    return respuestaInvalida(res, errores);
+  }
+
+  try {
+    const cambio = await incidenciaModel.cambiarEstado(id, req.usuario.id_usuario, {
+      estado,
+      solucion_descripcion: solucion,
+      comentario: textoComentario,
+    });
+
+    if (cambio.resultado === 'no_encontrada') {
+      return noEncontrada(res);
+    }
+    if (cambio.resultado === 'no_permitida') {
+      return res.status(400).json({
+        ok: false,
+        mensaje: `Transición no permitida: de '${cambio.estadoAnterior}' a '${estado}'`,
+      });
+    }
+
+    const incidencia = await incidenciaModel.buscarPorId(id);
+    return res.json(incidencia);
+  } catch (error) {
+    return errorInterno(res, error);
+  }
+};
+
 // GET /api/incidencias/:id/historial
 const historial = async (req, res) => {
   const id = obtenerIdValido(req, res);
@@ -324,4 +401,4 @@ const historial = async (req, res) => {
   }
 };
 
-module.exports = { crear, listar, resumen, detalle, editar, cancelar, historial };
+module.exports = { crear, listar, resumen, detalle, editar, cancelar, cambiarEstado, historial };

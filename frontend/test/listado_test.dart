@@ -78,6 +78,13 @@ class _RepositorioConError implements IncidenciasRepository {
     int id,
     List<FotoSeleccionada> fotos,
   ) async => throw error;
+  @override
+  Future<Incidencia> cambiarEstado(
+    int id,
+    EstadoIncidencia nuevoEstado, {
+    String? solucion,
+    String? comentario,
+  }) async => throw error;
 }
 
 Future<void> _abrirListado(

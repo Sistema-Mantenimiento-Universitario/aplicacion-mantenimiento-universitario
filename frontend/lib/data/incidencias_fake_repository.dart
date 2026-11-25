@@ -2,6 +2,7 @@ import '../models/categoria.dart';
 import '../models/estado_incidencia.dart';
 import '../models/evidencia.dart';
 import '../models/historial.dart';
+import '../models/transiciones_estado.dart';
 import '../models/incidencia.dart';
 import 'incidencias_repository.dart';
 import '../models/datos_incidencia.dart';
@@ -307,6 +308,90 @@ class FakeIncidenciasRepository implements IncidenciasRepository {
       ),
     );
     _incidencias[posicion] = actual.conEstado(EstadoIncidencia.cancelada);
+  }
+
+  // Mismas reglas que PATCH /api/incidencias/:id/estado
+  @override
+  Future<Incidencia> cambiarEstado(
+    int id,
+    EstadoIncidencia nuevoEstado, {
+    String? solucion,
+    String? comentario,
+  }) async {
+    await _esperar();
+    if (!esOperador) {
+      throw ApiException(
+        'No tienes permiso para realizar esta acción',
+        statusCode: 403,
+      );
+    }
+    final posicion = _incidencias.indexWhere((i) => i.id == id);
+    if (posicion == -1) {
+      throw ApiException('Incidencia no encontrada', statusCode: 404);
+    }
+    final actual = _incidencias[posicion];
+
+    if (!actual.estado.puedePasarA(nuevoEstado)) {
+      throw ApiException(
+        "Transición no permitida: de '${actual.estado.valorIncidencia}' "
+        "a '${nuevoEstado.valorIncidencia}'",
+        statusCode: 400,
+      );
+    }
+
+    final textoSolucion = (solucion ?? '').trim();
+    final textoComentario = (comentario ?? '').trim();
+    final errores = <String, String>{
+      if (nuevoEstado == EstadoIncidencia.finalizada && textoSolucion.isEmpty)
+        'solucion_descripcion': 'La solución es obligatoria para finalizar',
+      if (nuevoEstado == EstadoIncidencia.finalizada &&
+          textoSolucion.isNotEmpty &&
+          (textoSolucion.length < 10 || textoSolucion.length > 2000))
+        'solucion_descripcion':
+            'La solución debe tener entre 10 y 2000 caracteres',
+      if (textoComentario.length > 500)
+        'comentario': 'El comentario puede tener hasta 500 caracteres',
+    };
+    if (errores.isNotEmpty) {
+      throw ApiException('Datos inválidos', statusCode: 400, errores: errores);
+    }
+
+    final ahora = DateTime.now();
+    final finaliza = nuevoEstado == EstadoIncidencia.finalizada;
+    final actualizada = Incidencia(
+      id: actual.id,
+      titulo: actual.titulo,
+      descripcion: actual.descripcion,
+      estado: nuevoEstado,
+      categoria: actual.categoria,
+      reportadoPor: actual.reportadoPor,
+      // Al asignar, el operador que hace la petición queda como responsable
+      operador: nuevoEstado == EstadoIncidencia.asignada
+          ? _personaActual
+          : actual.operador,
+      ubicacionTexto: actual.ubicacionTexto,
+      latitud: actual.latitud,
+      longitud: actual.longitud,
+      solucionDescripcion: finaliza
+          ? textoSolucion
+          : actual.solucionDescripcion,
+      fechaCreacion: actual.fechaCreacion,
+      fechaActualizacion: ahora,
+      fechaFinalizacion: finaliza ? ahora : actual.fechaFinalizacion,
+    );
+
+    _historialDe(actual).add(
+      _entrada(
+        AccionHistorial.cambioEstado,
+        _personaActual,
+        ahora,
+        anterior: actual.estado,
+        nuevo: nuevoEstado,
+        comentario: textoComentario.isEmpty ? null : textoComentario,
+      ),
+    );
+    _incidencias[posicion] = actualizada;
+    return actualizada;
   }
 
   // Igual que el backend: 404 si no existe y 403 si es de otro usuario

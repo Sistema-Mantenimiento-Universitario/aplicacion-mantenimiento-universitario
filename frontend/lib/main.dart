@@ -15,7 +15,7 @@ import 'pages/formulario_incidencia_page.dart';
 import 'pages/home_page.dart';
 import 'pages/listado_incidencias_page.dart';
 import 'pages/login_page.dart';
-import 'pages/pendiente_page.dart';
+import 'pages/panel_operador_page.dart';
 import 'pages/rutas.dart';
 import 'theme/app_theme.dart';
 
@@ -114,7 +114,14 @@ class _MyAppState extends State<MyApp> {
       onSesionExpirada: _sesion.cerrarSesion,
     ),
   );
-
+  // Panel del operador (F10)
+  Widget _panelOperador() => _conSesion(
+    (usuario) => PanelOperadorPage(
+      usuario: usuario,
+      repositorio: _incidenciasPara(usuario),
+      onSesionExpirada: _sesion.cerrarSesion,
+    ),
+  );
   // Si la ruta recibe una Incidencia se abre en modo edición
   Widget _formulario(BuildContext context) {
     final argumento = ModalRoute.of(context)?.settings.arguments;
@@ -209,8 +216,7 @@ class _MyAppState extends State<MyApp> {
           // Sustituye estas pantallas provisionales por las reales:
           Rutas.nuevaIncidencia: _formulario,
           Rutas.misIncidencias: (_) => _listado(),
-          Rutas.adminIncidencias: (_) =>
-              const PendientePage(titulo: 'Administración de incidencias'),
+          Rutas.adminIncidencias: (_) => _panelOperador(),
         },
         onGenerateRoute: _rutaConId,
       ),

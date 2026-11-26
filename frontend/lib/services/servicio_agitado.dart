@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'dart:math';
 
+import 'package:flutter/foundation.dart';
 import 'package:sensors_plus/sensors_plus.dart';
 
 // Detecta cuando el usuario agita el celular, a partir del acelerómetro.
@@ -10,6 +11,13 @@ class ServicioAgitado {
     this.umbral = 25,
     this.espera = const Duration(seconds: 2),
   });
+
+  // El acelerómetro solo existe en celulares (y en el navegador del
+  // celular). En Windows no hay sensor (ahí se usa el botón de recargar)
+  static bool get disponible =>
+      kIsWeb ||
+      defaultTargetPlatform == TargetPlatform.android ||
+      defaultTargetPlatform == TargetPlatform.iOS;
 
   // Lecturas del acelerómetro, null: se usa el sensor real
   final Stream<AccelerometerEvent>? eventos;

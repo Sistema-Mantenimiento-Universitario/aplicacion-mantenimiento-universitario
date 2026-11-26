@@ -364,4 +364,22 @@ void main() {
     await tester.pumpAndSettle();
     expect(repositorio.cargas, 2);
   });
+
+  testWidgets('La lista cambia con una animación al filtrar', (tester) async {
+    await _abrirListado(tester, _ana);
+
+    await tester.tap(_enPanel('Pendiente'));
+    await tester.pump(); // llegan los resultados nuevos
+    await tester.pump(const Duration(milliseconds: 150));
+
+    final listas = find.descendant(
+      of: find.byType(AnimatedSwitcher),
+      matching: find.byType(ListView),
+    );
+    expect(listas, findsNWidgets(2));
+
+    await tester.pumpAndSettle();
+    expect(listas, findsOneWidget);
+    expect(_cantidad(tester), 2);
+  });
 }

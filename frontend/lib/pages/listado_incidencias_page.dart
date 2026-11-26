@@ -405,7 +405,25 @@ class _ListadoIncidenciasPageState extends State<ListadoIncidenciasPage> {
   }
 
   Widget _listaConRefresco() {
-    return RefreshIndicator(onRefresh: _cargar, child: _contenido());
+    return RefreshIndicator(
+      onRefresh: _cargar, // Al llegar resultados nuevos (filtros, búsqueda o al agitar), la
+      // lista anterior se desvanece y aparece la nueva
+      child: AnimatedSwitcher(
+        duration: const Duration(milliseconds: 300),
+        child: KeyedSubtree(
+          key: ValueKey<Object>(_claveContenido),
+          child: _contenido(),
+        ),
+      ),
+    );
+  }
+
+  // Cambia cuando hay algo distinto que mostrar: cargando, un error
+  // o una lista nueva (cada carga devuelve una lista distinta)
+  Object get _claveContenido {
+    if (_error != null) return 'error';
+    if (_cargando && _incidencias.isEmpty) return 'cargando';
+    return _incidencias;
   }
 
   Widget _contenido() {

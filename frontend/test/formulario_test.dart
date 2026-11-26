@@ -461,6 +461,28 @@ void main() {
     expect(find.text('Incidencia creada'), findsOneWidget);
   });
 
+  testWidgets('Al tocar una foto se abre en grande con animación', (
+    tester,
+  ) async {
+    await _abrirFormulario(tester, _RepositorioPrueba());
+
+    await tester.tap(find.text('Tomar foto'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byTooltip('Ver foto'));
+    // A media animación la foto va "volando" (Hero)
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 100));
+    expect(find.byType(Hero), findsWidgets);
+    await tester.pumpAndSettle();
+
+    expect(find.text('Vista previa'), findsOneWidget);
+
+    // Al cerrar regresa al formulario con la foto
+    await tester.tap(find.byType(CloseButton));
+    await tester.pumpAndSettle();
+    expect(find.text('Fotos (opcional) · 1 de 5'), findsOneWidget);
+  });
+
   testWidgets('Si la foto no es válida muestra el motivo', (tester) async {
     await _abrirFormulario(
       tester,

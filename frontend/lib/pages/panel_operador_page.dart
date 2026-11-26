@@ -1,10 +1,14 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 
 import '../data/incidencias_repository.dart';
 import '../models/estado_incidencia.dart';
 import '../models/incidencia.dart';
 import '../models/transiciones_estado.dart';
 import '../models/usuario.dart';
+import '../services/servicio_agitado.dart';
 import '../widgets/estado_chip.dart';
 import 'rutas.dart';
 
@@ -18,6 +22,7 @@ class PanelOperadorPage extends StatefulWidget {
     required this.usuario,
     required this.repositorio,
     this.onSesionExpirada,
+    this.servicioAgitado,
   });
 
   final Usuario usuario;
@@ -25,6 +30,9 @@ class PanelOperadorPage extends StatefulWidget {
 
   // Se llama cuando la API responde 401, main.dart cierra la sesión
   final VoidCallback? onSesionExpirada;
+
+  // Acelerómetro: Al agitar el celular se recarga la lista
+  final ServicioAgitado? servicioAgitado;
 
   // Reglas de docs/api.md → Límites y validaciones de campos
   static String? validarSolucion(String? valor) {
@@ -61,9 +69,32 @@ class _PanelOperadorPageState extends State<PanelOperadorPage> {
 
   static const _orden = EstadoIncidencia.values;
 
+  // Escucha del acelerómetro, se cancela al salir de la pantalla
+  StreamSubscription<void>? _escuchaAgitado;
+
   @override
   void initState() {
     super.initState();
+    _cargar();
+    _escuchaAgitado = widget.servicioAgitado?.agitados.listen(
+      (_) => _alAgitar(),
+    );
+  }
+
+  @override
+  void dispose() {
+    _escuchaAgitado?.cancel();
+    super.dispose();
+  }
+
+  // Al agitar el celular se recarga la lista
+  void _alAgitar() {
+    // Solo si esta pantalla es la que se ve y no está cargando ya
+    if (!mounted || _cargando) return;
+    if (ModalRoute.of(context)?.isCurrent == false) return;
+
+    HapticFeedback.mediumImpact();
+    _mensaje('Actualizando la lista…');
     _cargar();
   }
 

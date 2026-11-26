@@ -128,6 +128,7 @@ class _MyAppState extends State<MyApp> {
       usuario: usuario,
       repositorio: _incidenciasPara(usuario),
       onSesionExpirada: _sesion.cerrarSesion,
+      servicioAgitado: widget.servicioAgitado,
     ),
   );
   // Si la ruta recibe una Incidencia se abre en modo edición

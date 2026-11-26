@@ -1,5 +1,7 @@
 // Pruebas del Listado de incidencias.
 // Usan el repositorio simulado
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
@@ -16,6 +18,8 @@ import 'package:mantenimiento_universitario/pages/rutas.dart';
 import 'package:mantenimiento_universitario/theme/app_theme.dart';
 import 'package:mantenimiento_universitario/models/datos_incidencia.dart';
 import 'package:mantenimiento_universitario/services/servicio_imagenes.dart';
+import 'package:mantenimiento_universitario/services/servicio_agitado.dart';
+import 'package:sensors_plus/sensors_plus.dart';
 
 const _ana = Usuario(
   id: 1,
@@ -93,6 +97,7 @@ Future<void> _abrirListado(
   IncidenciasRepository? repositorio,
   VoidCallback? onSesionExpirada,
   Size tamano = _computadora,
+  ServicioAgitado? agitado,
 }) async {
   // Pantalla alta para que toda la lista quede visible.
   tester.view.physicalSize = tamano;
@@ -112,6 +117,7 @@ Future<void> _abrirListado(
               demora: Duration.zero,
             ),
         onSesionExpirada: onSesionExpirada,
+        servicioAgitado: agitado,
       ),
       // El detalle se abre con el id en la URL: /incidencias/detalle?id=1
       onGenerateRoute: (settings) =>
@@ -125,6 +131,28 @@ Future<void> _abrirListado(
     ),
   );
   await tester.pumpAndSettle();
+}
+
+// Repositorio simulado que cuenta cuántas veces se pidió la lista
+class _RepositorioContador extends FakeIncidenciasRepository {
+  _RepositorioContador()
+    : super(idUsuario: 1, esOperador: false, demora: Duration.zero);
+
+  int cargas = 0;
+
+  @override
+  Future<List<Incidencia>> obtenerIncidencias({
+    String? texto,
+    EstadoIncidencia? estado,
+    int? idCategoria,
+  }) {
+    cargas++;
+    return super.obtenerIncidencias(
+      texto: texto,
+      estado: estado,
+      idCategoria: idCategoria,
+    );
+  }
 }
 
 /// Cuántas incidencias hay en la lista
@@ -303,5 +331,55 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.text('Detalle 1'), findsOneWidget);
+  });
+
+  testWidgets('Al agitar el celular se recarga la lista', (tester) async {
+    final repositorio = _RepositorioContador();
+    // Acelerómetro simulado
+    final sensor = StreamController<AccelerometerEvent>();
+    addTearDown(sensor.close);
+
+    await _abrirListado(
+      tester,
+      _ana,
+      repositorio: repositorio,
+      tamano: _celular,
+      agitado: ServicioAgitado(eventos: sensor.stream),
+    );
+    expect(repositorio.cargas, 1);
+
+    // En reposo no pasa nada
+    sensor.add(AccelerometerEvent(0, 0, 9.8, DateTime(2026, 11, 25, 10)));
+    await tester.pumpAndSettle();
+    expect(repositorio.cargas, 1);
+
+    // Un movimiento fuerte recarga y avisa
+    sensor.add(
+      AccelerometerEvent(22, 15, 9.8, DateTime(2026, 11, 25, 10, 0, 1)),
+    );
+    // Un cuadro para recibir la lectura y otro para mostrar el aviso
+    await tester.pump();
+    await tester.pump();
+    expect(find.text('Actualizando la lista…'), findsOneWidget);
+    await tester.pumpAndSettle();
+    expect(repositorio.cargas, 2);
+  });
+
+  testWidgets('La lista cambia con una animación al filtrar', (tester) async {
+    await _abrirListado(tester, _ana);
+
+    await tester.tap(_enPanel('Pendiente'));
+    await tester.pump(); // llegan los resultados nuevos
+    await tester.pump(const Duration(milliseconds: 150));
+
+    final listas = find.descendant(
+      of: find.byType(AnimatedSwitcher),
+      matching: find.byType(ListView),
+    );
+    expect(listas, findsNWidgets(2));
+
+    await tester.pumpAndSettle();
+    expect(listas, findsOneWidget);
+    expect(_cantidad(tester), 2);
   });
 }

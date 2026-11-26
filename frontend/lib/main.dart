@@ -17,6 +17,7 @@ import 'pages/listado_incidencias_page.dart';
 import 'pages/login_page.dart';
 import 'pages/panel_operador_page.dart';
 import 'pages/rutas.dart';
+import 'services/servicio_agitado.dart';
 import 'theme/app_theme.dart';
 
 /// URL base de la API (docs/api.md). Incluye el prefijo /api.
@@ -38,7 +39,11 @@ Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
   // Carga el tema guardado antes de mostrar la app
   await iniciarPreferenciaTema();
-  runApp(const MyApp());
+  runApp(
+    MyApp(
+      servicioAgitado: ServicioAgitado.disponible ? ServicioAgitado() : null,
+    ),
+  );
 }
 
 class MyApp extends StatefulWidget {
@@ -47,6 +52,7 @@ class MyApp extends StatefulWidget {
     this.authRepository,
     this.sesionStorage,
     this.crearIncidenciasRepository,
+    this.servicioAgitado,
   });
 
   /// Permiten inyectar dependencias (las usan las pruebas).
@@ -54,6 +60,7 @@ class MyApp extends StatefulWidget {
   final SesionStorage? sesionStorage;
   final IncidenciasRepository Function(Usuario usuario)?
   crearIncidenciasRepository;
+  final ServicioAgitado? servicioAgitado; // Acelerómetro para recargar al agitar el celular (null: sin agitado)
 
   @override
   State<MyApp> createState() => _MyAppState();
@@ -112,6 +119,7 @@ class _MyAppState extends State<MyApp> {
       usuario: usuario,
       repositorio: _incidenciasPara(usuario),
       onSesionExpirada: _sesion.cerrarSesion,
+      servicioAgitado: widget.servicioAgitado,
     ),
   );
   // Panel del operador (F10)
@@ -120,6 +128,7 @@ class _MyAppState extends State<MyApp> {
       usuario: usuario,
       repositorio: _incidenciasPara(usuario),
       onSesionExpirada: _sesion.cerrarSesion,
+      servicioAgitado: widget.servicioAgitado,
     ),
   );
   // Si la ruta recibe una Incidencia se abre en modo edición

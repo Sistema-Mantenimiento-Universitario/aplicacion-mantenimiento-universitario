@@ -620,6 +620,15 @@ class _MiniaturaFoto extends StatelessWidget {
   final FotoSeleccionada foto;
   final VoidCallback? onQuitar;
 
+  void _ampliar(BuildContext context) {
+    Navigator.of(context).push(
+      MaterialPageRoute<void>(
+        fullscreenDialog: true,
+        builder: (_) => _VistaFoto(foto: foto),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return SizedBox(
@@ -631,7 +640,18 @@ class _MiniaturaFoto extends StatelessWidget {
           ClipRRect(
             borderRadius: BorderRadius.circular(12),
             // Image.memory funciona en todas las plataformas, también en web
-            child: Image.memory(foto.bytes, fit: BoxFit.cover),
+            child: Tooltip(
+              message: 'Ver foto',
+              child: GestureDetector(
+                onTap: () => _ampliar(context),
+                // Hero: la miniatura "vuela" a la vista en grande
+                child: Hero(
+                  tag: foto,
+                  // Image.memory funciona en todas las plataformas
+                  child: Image.memory(foto.bytes, fit: BoxFit.cover),
+                ),
+              ),
+            ),
           ),
           Positioned(
             top: 2,
@@ -645,6 +665,33 @@ class _MiniaturaFoto extends StatelessWidget {
             ),
           ),
         ],
+      ),
+    );
+  }
+}
+
+class _VistaFoto extends StatelessWidget {
+  const _VistaFoto({required this.foto});
+
+  final FotoSeleccionada foto;
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      backgroundColor: Colors.black,
+      appBar: AppBar(
+        backgroundColor: Colors.black,
+        foregroundColor: Colors.white,
+        title: const Text('Vista previa'),
+      ),
+      body: Center(
+        child: InteractiveViewer(
+          maxScale: 4,
+          child: Hero(
+            tag: foto,
+            child: Image.memory(foto.bytes, fit: BoxFit.contain),
+          ),
+        ),
       ),
     );
   }

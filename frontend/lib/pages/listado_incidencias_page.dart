@@ -7,6 +7,7 @@ import '../data/incidencias_repository.dart';
 import '../models/categoria.dart';
 import '../models/estado_incidencia.dart';
 import '../models/incidencia.dart';
+import '../services/servicio_agitado.dart';
 import '../models/usuario.dart';
 import '../theme/app_theme.dart';
 import '../widgets/estado_chip.dart';
@@ -20,12 +21,16 @@ class ListadoIncidenciasPage extends StatefulWidget {
     required this.usuario,
     required this.repositorio,
     this.onSesionExpirada,
+    this.servicioAgitado,
   });
 
   final Usuario usuario;
   final IncidenciasRepository repositorio;
 
   final VoidCallback? onSesionExpirada; // Se llama cuando la API responde 401, main.dart cierra la sesión.
+
+  // Acelerómetro: Al agitar el celular se recarga la lista.
+  final ServicioAgitado? servicioAgitado;
 
   @override
   State<ListadoIncidenciasPage> createState() => _ListadoIncidenciasPageState();
@@ -49,6 +54,9 @@ class _ListadoIncidenciasPageState extends State<ListadoIncidenciasPage> {
   int _peticion = 0;
   bool _saliendo = false;
 
+  // Escucha del acelerómetro, se cancela al salir de la pantalla
+  StreamSubscription<void>? _escuchaAgitado;
+
   bool get _hayFiltros =>
       _buscador.text.trim().isNotEmpty ||
       _estado != null ||
@@ -59,11 +67,15 @@ class _ListadoIncidenciasPageState extends State<ListadoIncidenciasPage> {
     super.initState();
     _cargarCategorias();
     _cargar();
+    _escuchaAgitado = widget.servicioAgitado?.agitados.listen(
+      (_) => _alAgitar(),
+    );
   }
 
   @override
   void dispose() {
     _espera?.cancel();
+    _escuchaAgitado?.cancel();
     _buscador.dispose();
     super.dispose();
   }
@@ -104,6 +116,22 @@ class _ListadoIncidenciasPageState extends State<ListadoIncidenciasPage> {
       });
       if (e.sesionExpirada) _sesionExpirada();
     }
+  }
+
+  void _alAgitar() {
+    if (!mounted || _cargando) return;
+    if (ModalRoute.of(context)?.isCurrent == false) return;
+
+    HapticFeedback.mediumImpact();
+    ScaffoldMessenger.of(context)
+      ..hideCurrentSnackBar()
+      ..showSnackBar(
+        const SnackBar(
+          content: Text('Actualizando la lista…'),
+          duration: Duration(seconds: 1),
+        ),
+      );
+    _cargar();
   }
 
   void _alEscribir(String _) {
@@ -377,7 +405,25 @@ class _ListadoIncidenciasPageState extends State<ListadoIncidenciasPage> {
   }
 
   Widget _listaConRefresco() {
-    return RefreshIndicator(onRefresh: _cargar, child: _contenido());
+    return RefreshIndicator(
+      onRefresh: _cargar, // Al llegar resultados nuevos (filtros, búsqueda o al agitar), la
+      // lista anterior se desvanece y aparece la nueva
+      child: AnimatedSwitcher(
+        duration: const Duration(milliseconds: 300),
+        child: KeyedSubtree(
+          key: ValueKey<Object>(_claveContenido),
+          child: _contenido(),
+        ),
+      ),
+    );
+  }
+
+  // Cambia cuando hay algo distinto que mostrar: cargando, un error
+  // o una lista nueva (cada carga devuelve una lista distinta)
+  Object get _claveContenido {
+    if (_error != null) return 'error';
+    if (_cargando && _incidencias.isEmpty) return 'cargando';
+    return _incidencias;
   }
 
   Widget _contenido() {

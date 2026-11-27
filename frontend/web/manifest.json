@@ -1,11 +1,11 @@
 {
-    "name": "mantenimiento_universitario",
-    "short_name": "mantenimiento_universitario",
+    "name": "Mantenimiento universitario",
+    "short_name": "Mantenimiento",
     "start_url": ".",
     "display": "standalone",
-    "background_color": "#0175C2",
-    "theme_color": "#0175C2",
-    "description": "A new Flutter project.",
+    "background_color": "#FEFCED",
+    "theme_color": "#A767FF",
+    "description": "Reporte y seguimiento de incidencias de mantenimiento universitario.",
     "orientation": "portrait-primary",
     "prefer_related_applications": false,
     "icons": [

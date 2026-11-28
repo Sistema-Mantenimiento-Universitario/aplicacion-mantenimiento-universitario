@@ -12,6 +12,13 @@ const pool = mysql.createPool({
   queueLimit: 0,
   connectTimeout: 10000,
   decimalNumbers: true,
+  // Las fechas viajan en UTC (la app las convierte con toLocal)
+  timezone: 'Z',
+});
+
+// NOW() y CURRENT_TIMESTAMP también en UTC, sin importar la zona del servidor MySQL
+pool.on('connection', (conexion) => {
+  conexion.query("SET time_zone = '+00:00'");
 });
 
 const probarConexion = async () => {
